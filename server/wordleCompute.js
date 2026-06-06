@@ -1,6 +1,6 @@
 
 import guessWords from './guessWords.js';
-import { IS_HARD_MODE, isHardModeValid, perfectScore, score } from './wordleCore.js';
+import { IS_HARD_MODE, isHardModeValid, perfectScore, score, getYellowCount, getFastYellowCount, getHardModeConstraints, isHardModeValidOptimized } from './wordleCore.js';
 import partition from './partition.js';
 
 class ComputationNode {
@@ -277,7 +277,7 @@ class GuessNode {
           map[ score ] = words[ 0 ];
         }
         else {
-          const newPossibleGuesses = IS_HARD_MODE ? possibleGuesses.filter( guess => isHardModeValid( guess, option.guess, score ) ) : guessWords;
+          const newPossibleGuesses = IS_HARD_MODE ? possibleGuesses.filter( guess => isHardModeValidOptimized( guess, getHardModeConstraints( option.guess, score ) ) ) : guessWords;
           const node = new ComputationNode( option.map[ score ], guesses, newPossibleGuesses, false, heuristic );
           map[ score ] = node;
         }
@@ -407,7 +407,7 @@ class GuessNode {
     for ( const score in obj.m ) {
       const item = obj.m[ score ];
 
-      map[ score ] = typeof item === 'string' ? item : ComputationNode.deserialize( item, possibleGuesses.filter( guess => isHardModeValid( guess, obj.g, score ) ) );
+      map[ score ] = typeof item === 'string' ? item : ComputationNode.deserialize( item, possibleGuesses.filter( guess => isHardModeValidOptimized( guess, getHardModeConstraints( obj.g, score ) ) ) );
     }
     guessNode.map = map;
     return guessNode;
@@ -423,14 +423,15 @@ class GuessNode {
       const isString = typeof stringOrComputationNode === 'string';
       const subtree = isString ? stringOrComputationNode : stringOrComputationNode.createTree( metric );
       map[ score ] = subtree;
+      const yellows = getYellowCount( score );
       if ( score === perfectScore ) {
-        ranking.addSelf();
+        ranking.addSelf( yellows );
       }
       else if ( isString ) {
-        ranking.addString();
+        ranking.addString( yellows );
       }
       else {
-        ranking.addRanking( subtree.ranking );
+        ranking.addRanking( subtree.ranking, yellows );
       }
     }
 
@@ -460,14 +461,15 @@ class GuessNode {
         return null;
       }
       map[ score ] = subtree;
+      const yellows = getYellowCount( score );
       if ( score === perfectScore ) {
-        ranking.addSelf();
+        ranking.addSelf( yellows );
       }
       else if ( isString ) {
-        ranking.addString();
+        ranking.addString( yellows );
       }
       else {
-        ranking.addRanking( subtree.ranking );
+        ranking.addRanking( subtree.ranking, yellows );
       }
     }
 
@@ -499,10 +501,11 @@ class GuessNode {
 }
 
 class Heuristic {
-  constructor( averageWeight = 100, bestWeight = 1, nextWeight = 0 ) {
+  constructor( averageWeight = 100, bestWeight = 1, nextWeight = 0, yellowWeight = 0 ) {
     this.averageWeight = averageWeight;
     this.bestWeight = bestWeight;
     this.nextWeight = nextWeight;
+    this.yellowWeight = yellowWeight;
   }
 
   // @public
@@ -510,10 +513,12 @@ class Heuristic {
     const averageWeight = heuristic.averageWeight;
     const bestWeight = heuristic.bestWeight;
     const nextWeight = heuristic.nextWeight;
+    const yellowWeight = heuristic.yellowWeight;
 
     let count = 0;
     let best = 0;
     let bestScore = '22222';
+    let totalYellows = 0;
     for ( const score in map ) {
       const length = map[ score ].length;
       if ( best < length ) {
@@ -522,8 +527,9 @@ class Heuristic {
       }
       best = Math.max( best, length );
       count += 1;
+      totalYellows += getYellowCount( score ) * length;
     }
-    let size = averageWeight * words.length / ( count ) + bestWeight * best; // average length weighted in as a third
+    let size = averageWeight * words.length / ( count ) + bestWeight * best + yellowWeight * ( totalYellows / words.length ); // average length weighted in as a third
     if ( !skipNext && nextWeight && map[ bestScore ].length > 1 ) {
       const subWords = map[ bestScore ];
       let minSub = Number.POSITIVE_INFINITY;
@@ -543,28 +549,33 @@ class Heuristic {
 }
 
 class Ranking {
-  constructor( counts = [ 0, 0 ] ) {
+  constructor( counts = [ 0, 0 ], yellows = 0 ) {
     this.counts = counts;
+    this.yellows = yellows;
   }
 
   // @public
-  addString() {
+  addString( yellows ) {
     this.counts[ 1 ]++;
+    this.yellows += yellows;
   }
 
   // @public
-  addSelf() {
+  addSelf( yellows ) {
     this.counts[ 0 ]++;
+    this.yellows += yellows;
   }
 
   // @public -- child ranking
-  addRanking( ranking ) {
+  addRanking( ranking, yellows ) {
+    const subtreeWords = ranking.totalWords();
     for ( let i = 0; i < ranking.counts.length; i++ ) {
       if ( i + 1 >= this.counts.length ) {
         this.counts.push( 0 );
       }
       this.counts[ i + 1 ] += ranking.counts[ i ];
     }
+    this.yellows += ranking.yellows + yellows * subtreeWords;
   }
 
   // @public
@@ -572,6 +583,15 @@ class Ranking {
     let count = 0;
     for ( let i = 0; i < this.counts.length; i++ ) {
       count += this.counts[ i ] * ( i + 1 );
+    }
+    return count;
+  }
+
+  // @public
+  totalWords() {
+    let count = 0;
+    for ( let i = 0; i < this.counts.length; i++ ) {
+      count += this.counts[ i ];
     }
     return count;
   }
@@ -600,6 +620,13 @@ class Ranking {
     const aScore = a.totalGuessesScore();
     const bScore = b.totalGuessesScore();
     return aScore < bScore ? -1 : ( aScore > bScore ? 1 : Ranking.minimizeLongestMetric( a, b ) );
+  }
+
+  // @public
+  static minimizeYellowsMetric( a, b ) {
+    const aYellows = a.yellows / a.totalWords();
+    const bYellows = b.yellows / b.totalWords();
+    return aYellows < bYellows ? -1 : ( aYellows > bYellows ? 1 : Ranking.totalGuessesMetric( a, b ) );
   }
 }
 const treeStatistics = tree => {

@@ -1,6 +1,5 @@
 
 import { loadGuess, getGuesses, isLocked, createLock, deleteLock, saveGuess } from './files.js';
-import _ from 'lodash';
 import guessWords from './guessWords.js';
 import partition from './partition.js';
 import targetWords from './targetWords.js';

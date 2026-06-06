@@ -146,4 +146,67 @@ const fastDecode = n => {
   return a + b + c + d + e;
 };
 
-export { score, perfectScore, encode, decode, IS_HARD_MODE, LENGTH, ABSENT, PRESENT, CORRECT, fastScore, fastDoesFullyPartition, fastPartition, fastDecode, isHardModeValid };
+const getYellowCount = scoreString => {
+  let count = 0;
+  for ( let i = 0; i < LENGTH; i++ ) {
+    if ( scoreString[ i ] === '1' ) {
+      count++;
+    }
+  }
+  return count;
+};
+
+const fastYellowCounts = new Uint8Array( 243 );
+for ( let i = 0; i < 243; i++ ) {
+  let count = 0;
+  let n = i;
+  for ( let j = 0; j < 5; j++ ) {
+    if ( n % 3 === 1 ) {
+      count++;
+    }
+    n = Math.floor( n / 3 );
+  }
+  fastYellowCounts[ i ] = count;
+}
+const getFastYellowCount = score => fastYellowCounts[ score ];
+
+const getHardModeConstraints = ( previousGuess, previousScore ) => {
+  const fixedPositions = [ null, null, null, null, null ];
+  const minCountsMap = {}; // letter -> count
+
+  for ( let i = 0; i < LENGTH; i++ ) {
+    const s = previousScore[ i ];
+    if ( s !== '0' ) {
+      const letter = previousGuess[ i ];
+      minCountsMap[ letter ] = ( minCountsMap[ letter ] || 0 ) + 1;
+      if ( s === '2' ) {
+        fixedPositions[ i ] = letter;
+      }
+    }
+  }
+  return { fixedPositions, minCounts: Object.entries( minCountsMap ) };
+};
+
+const isHardModeValidOptimized = ( nextGuess, constraints ) => {
+  const { fixedPositions, minCounts } = constraints;
+  for ( let i = 0; i < LENGTH; i++ ) {
+    if ( fixedPositions[ i ] !== null && nextGuess[ i ] !== fixedPositions[ i ] ) {
+      return false;
+    }
+  }
+  for ( let i = 0; i < minCounts.length; i++ ) {
+    const [ letter, minCount ] = minCounts[ i ];
+    let count = 0;
+    for ( let j = 0; j < LENGTH; j++ ) {
+      if ( nextGuess[ j ] === letter ) {
+        count++;
+      }
+    }
+    if ( count < minCount ) {
+      return false;
+    }
+  }
+  return true;
+};
+
+export { score, perfectScore, encode, decode, IS_HARD_MODE, LENGTH, ABSENT, PRESENT, CORRECT, fastScore, fastDoesFullyPartition, fastPartition, fastDecode, isHardModeValid, getYellowCount, getFastYellowCount, getHardModeConstraints, isHardModeValidOptimized };
