@@ -118,7 +118,15 @@
       }
       averageGuesses /= total;
       return averageGuesses;
-    }
+    };
+
+    const computeAverageYellows = tree => {
+      let total = 0;
+      for ( let i = 0; i < tree.ranking.counts.length; i++ ) {
+        total += tree.ranking.counts[ i ];
+      }
+      return tree.ranking.yellows / total;
+    };
 
     class StaticWordNode extends scenery.FlowBox {
       constructor( word, score, options ) {
@@ -233,7 +241,16 @@
         this.addChild( letterBox );
 
         if ( !isLeaf ) {
-          this.addChild( new scenery.Text( `${computeAverageGuesses( tree ).toFixed( 2 )} ${depth === 1 ? 'total avg. guesses' : 'avg. guesses left'}, ${words.length} words, ${Object.values( tree.map ).length} colorings`, { fontSize: 14, fontFamily: fontFamily, fill: gray } ) );
+          const stats = [
+            `${computeAverageGuesses( tree ).toFixed( 2 )} ${depth === 1 ? 'total avg. guesses' : 'avg. guesses left'}`
+          ];
+          if ( tree.ranking.yellows !== undefined ) {
+            stats.push( `${computeAverageYellows( tree ).toFixed( 2 )} avg. yellows` );
+          }
+          stats.push( `${words.length} words` );
+          stats.push( `${Object.values( tree.map ).length} colorings` );
+
+          this.addChild( new scenery.Text( stats.join( ', ' ), { fontSize: 14, fontFamily: fontFamily, fill: gray } ) );
         }
         else {
           this.addChild( new scenery.Text( `solved`, { fontSize: 14, fontFamily: fontFamily, fill: gray, layoutOptions: { topMargin: 5 } } ) );
@@ -359,6 +376,13 @@
                 new scenery.Text( 'Hard Mode', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
                 createTreeButton( hardSaletTree ),
                 createTreeButton( hardCrampTree )
+              ]
+            } ),
+            new scenery.FlowBox( {
+              orientation: 'vertical',
+              children: [
+                new scenery.Text( 'Sea of Greens', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
+                new scenery.Text( '(minimize yellows)', { font: new scenery.Font( { size: 10, fontFamily: fontFamily } ), fill: gray, layoutOptions: { bottomMargin: 5 } } )
               ]
             } ),
           ]
