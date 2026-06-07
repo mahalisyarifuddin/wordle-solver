@@ -1,4 +1,5 @@
-const IS_HARD_MODE = true;
+let IS_HARD_MODE = false;
+const setHardMode = value => { IS_HARD_MODE = value; };
 const LENGTH = 5;
 const ABSENT = 0;
 const PRESENT = 1;
@@ -145,5 +146,22 @@ const fastDecode = n => {
   const e = Math.floor( n / 81 ) % 3;
   return a + b + c + d + e;
 };
+const fastDecodeYellows = n => {
+  const a = Math.floor( n / 1 ) % 3;
+  const b = Math.floor( n / 3 ) % 3;
+  const c = Math.floor( n / 9 ) % 3;
+  const d = Math.floor( n / 27 ) % 3;
+  const e = Math.floor( n / 81 ) % 3;
+  return ( a === 1 ? 1 : 0 ) + ( b === 1 ? 1 : 0 ) + ( c === 1 ? 1 : 0 ) + ( d === 1 ? 1 : 0 ) + ( e === 1 ? 1 : 0 );
+};
+const getYellows = score => {
+  let count = 0;
+  for ( let i = 0; i < score.length; i++ ) {
+    if ( score[ i ] === '1' ) {
+      count++;
+    }
+  }
+  return count;
+};
 
-export { score, perfectScore, encode, decode, IS_HARD_MODE, LENGTH, ABSENT, PRESENT, CORRECT, fastScore, fastDoesFullyPartition, fastPartition, fastDecode, isHardModeValid };
+export { score, perfectScore, encode, decode, IS_HARD_MODE, setHardMode, LENGTH, ABSENT, PRESENT, CORRECT, fastScore, fastDoesFullyPartition, fastPartition, fastDecode, fastDecodeYellows, getYellows, isHardModeValid };
