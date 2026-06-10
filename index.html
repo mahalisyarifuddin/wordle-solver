@@ -7,12 +7,11 @@
 
   <title>Wordle Solver</title>
 
-  <script src="lib/jquery-2.1.0.min.js"></script>
-  <script src="lib/lodash-4.17.4.min.js"></script>
+  <script src="https://code.jquery.com/jquery-2.1.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.4/lodash.min.js"></script>
   <script src="lib/scenery.min.js"></script>
   <script src="lib/he-1.1.1.js"></script>
   <script src="lib/himalaya-1.1.0.js"></script>
-  <script src="lib/linebreak-1.1.0.js"></script>
   <script src="lib/flatqueue-1.2.1.js"></script>
 
 <!--  <script src="../assert/js/assert.js"></script>-->
@@ -51,6 +50,8 @@
     import minRonteTree from './data/ronte.tree.js';
     import hardSaletTree from './data/salet.tree.hard.js';
     import hardCrampTree from './data/cramp.tree.hard.js';
+    import greensSaletTree from './data/salet.tree.greens.js';
+    import greensHardSaletTree from './data/salet.tree.hard.greens.js';
     import targetWords from './data/targetWords.js';
 
     const fontFamily = "'Clear Sans', 'Helvetica Neue', Arial, sans-serif";
@@ -118,6 +119,15 @@
       }
       averageGuesses /= total;
       return averageGuesses;
+    }
+
+    const computeAverageYellows = tree => {
+      if ( tree.ranking.yellows === undefined ) return null;
+      let total = 0;
+      for ( let i = 0; i < tree.ranking.counts.length; i++ ) {
+        total += tree.ranking.counts[ i ];
+      }
+      return tree.ranking.yellows / total;
     }
 
     class StaticWordNode extends scenery.FlowBox {
@@ -233,7 +243,9 @@
         this.addChild( letterBox );
 
         if ( !isLeaf ) {
-          this.addChild( new scenery.Text( `${computeAverageGuesses( tree ).toFixed( 2 )} ${depth === 1 ? 'total avg. guesses' : 'avg. guesses left'}, ${words.length} words, ${Object.values( tree.map ).length} colorings`, { fontSize: 14, fontFamily: fontFamily, fill: gray } ) );
+          const avgYellows = computeAverageYellows( tree );
+          const yellowText = avgYellows !== null ? `, ${avgYellows.toFixed( 2 )} avg. yellows` : '';
+          this.addChild( new scenery.Text( `${computeAverageGuesses( tree ).toFixed( 2 )} ${depth === 1 ? 'total avg. guesses' : 'avg. guesses left'}, ${words.length} words${yellowText}, ${Object.values( tree.map ).length} colorings`, { fontSize: 14, fontFamily: fontFamily, fill: gray } ) );
         }
         else {
           this.addChild( new scenery.Text( `solved`, { fontSize: 14, fontFamily: fontFamily, fill: gray, layoutOptions: { topMargin: 5 } } ) );
@@ -302,8 +314,8 @@
 
     const selectionHeaderFont = new scenery.Font( { size: 14, fontFamily: fontFamily } );
 
-    const createTreeButton = tree => {
-      const label = new scenery.RichText( `<u>${tree.guess.toUpperCase()}</u>`, {
+    const createTreeButton = ( tree, labelText ) => {
+      const label = new scenery.RichText( `<u>${( labelText || tree.guess ).toUpperCase()}</u>`, {
         font: new scenery.Font( { size: 14, fontFamily: fontFamily, weight: '700' } ),
         cursor: 'pointer',
         fill: 'rgb(27,0,241)'
@@ -359,6 +371,14 @@
                 new scenery.Text( 'Hard Mode', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
                 createTreeButton( hardSaletTree ),
                 createTreeButton( hardCrampTree )
+              ]
+            } ),
+            new scenery.FlowBox( {
+              orientation: 'vertical',
+              children: [
+                new scenery.Text( 'Sea of Greens', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
+                createTreeButton( greensSaletTree, 'SALET' ),
+                createTreeButton( greensHardSaletTree, 'SALET (Hard)' )
               ]
             } ),
           ]
