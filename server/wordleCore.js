@@ -1,4 +1,8 @@
-const IS_HARD_MODE = true;
+let IS_HARD_MODE = true;
+const setHardMode = hardMode => {
+  IS_HARD_MODE = hardMode;
+};
+
 const LENGTH = 5;
 const ABSENT = 0;
 const PRESENT = 1;
@@ -46,6 +50,17 @@ const decode = string => {
   }
   return scratchResult;
 };
+
+const getYellows = scoreString => {
+  let count = 0;
+  for ( let i = 0; i < scoreString.length; i++ ) {
+    if ( scoreString[ i ] === '1' ) {
+      count++;
+    }
+  }
+  return count;
+};
+
 const isHardModeValid = ( nextGuess, previousGuess, previousScore ) => {
   for ( let i = 0; i < LENGTH; i++ ) {
     if ( previousScore[ i ] === '2' && nextGuess[ i ] !== previousGuess[ i ] ) {
@@ -72,6 +87,43 @@ const isHardModeValid = ( nextGuess, previousGuess, previousScore ) => {
       }
     }
     if ( nextCount < previousCount ) {
+      return false;
+    }
+  }
+  return true;
+};
+
+const getHardModeConstraints = ( previousGuess, previousScore ) => {
+  const fixed = [ null, null, null, null, null ];
+  const minCounts = {};
+  for ( let i = 0; i < LENGTH; i++ ) {
+    const letter = previousGuess[ i ];
+    const score = previousScore[ i ];
+    if ( score === '2' ) {
+      fixed[ i ] = letter;
+    }
+    if ( score !== '0' ) {
+      minCounts[ letter ] = ( minCounts[ letter ] || 0 ) + 1;
+    }
+  }
+  return { fixed, minCounts: Object.entries( minCounts ) };
+};
+
+const isHardModeValidOptimized = ( nextGuess, constraints ) => {
+  for ( let i = 0; i < LENGTH; i++ ) {
+    if ( constraints.fixed[ i ] && nextGuess[ i ] !== constraints.fixed[ i ] ) {
+      return false;
+    }
+  }
+  for ( let i = 0; i < constraints.minCounts.length; i++ ) {
+    const [ letter, minCount ] = constraints.minCounts[ i ];
+    let count = 0;
+    for ( let j = 0; j < LENGTH; j++ ) {
+      if ( nextGuess[ j ] === letter ) {
+        count++;
+      }
+    }
+    if ( count < minCount ) {
       return false;
     }
   }
@@ -145,5 +197,22 @@ const fastDecode = n => {
   const e = Math.floor( n / 81 ) % 3;
   return a + b + c + d + e;
 };
+const fastToScoreString = n => {
+  const a = Math.floor( n / 1 ) % 3;
+  const b = Math.floor( n / 3 ) % 3;
+  const c = Math.floor( n / 9 ) % 3;
+  const d = Math.floor( n / 27 ) % 3;
+  const e = Math.floor( n / 81 ) % 3;
+  return '' + a + b + c + d + e;
+};
+const fastDecodeYellows = n => {
+  let yellows = 0;
+  if ( Math.floor( n / 1 ) % 3 === PRESENT ) yellows++;
+  if ( Math.floor( n / 3 ) % 3 === PRESENT ) yellows++;
+  if ( Math.floor( n / 9 ) % 3 === PRESENT ) yellows++;
+  if ( Math.floor( n / 27 ) % 3 === PRESENT ) yellows++;
+  if ( Math.floor( n / 81 ) % 3 === PRESENT ) yellows++;
+  return yellows;
+};
 
-export { score, perfectScore, encode, decode, IS_HARD_MODE, LENGTH, ABSENT, PRESENT, CORRECT, fastScore, fastDoesFullyPartition, fastPartition, fastDecode, isHardModeValid };
+export { score, perfectScore, encode, decode, IS_HARD_MODE, setHardMode, LENGTH, ABSENT, PRESENT, CORRECT, fastScore, fastDoesFullyPartition, fastPartition, fastDecode, fastToScoreString, isHardModeValid, getYellows, getHardModeConstraints, isHardModeValidOptimized, fastDecodeYellows };
