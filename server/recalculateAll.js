@@ -15,7 +15,7 @@ const generate = ( starter, metric, name, hardMode = false ) => {
   const node = new ComputationNode( targetWords, [], guessWords, true );
   node.openSpecificGuess( starter );
 
-  const h = ( metric === Ranking.minimizeYellowsMetric ) ? new Heuristic( 100, 1, 0, 10 ) : new Heuristic();
+  const h = ( metric === Ranking.minimizeYellowsMetric ) ? new Heuristic( 100, 1, 0, 50 ) : new Heuristic();
 
   // Recursively open more nodes to find better trees
   const recurse = ( computationNode, depth ) => {

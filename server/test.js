@@ -1,6 +1,6 @@
 
 import { setHardMode } from './wordleCore.js';
-import { Ranking, ComputationNode } from './wordleCompute.js';
+import { Ranking, ComputationNode, Heuristic } from './wordleCompute.js';
 import targetWords from './targetWords.js';
 import guessWords from './guessWords.js';
 
@@ -24,5 +24,9 @@ console.log( 'Testing Sea of Greens...' );
 setHardMode( false );
 node = new ComputationNode( targetWords, [], guessWords, true );
 node.openSpecificGuess( testStarter );
+
+const greensHeuristic = new Heuristic( 100, 1, 0, 50 );
+node.guessNodes[ 0 ].map[ '00000' ].broaden( greensHeuristic, 10 );
+
 tree = node.guessNodes[ 0 ].createTree( Ranking.minimizeYellowsMetric );
 console.log( `Sea of Greens ${testStarter} ranking:`, tree.ranking.counts, 'Yellows:', tree.ranking.yellows );

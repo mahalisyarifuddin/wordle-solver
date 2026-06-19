@@ -638,12 +638,10 @@ class Ranking {
 
   // @public
   static minimizeYellowsMetric( a, b ) {
-    const aScore = a.totalGuessesScore();
-    const bScore = b.totalGuessesScore();
+    const aScore = a.totalGuessesScore() + 0.5 * a.yellows;
+    const bScore = b.totalGuessesScore() + 0.5 * b.yellows;
     if ( aScore < bScore ) return -1;
     if ( aScore > bScore ) return 1;
-    if ( a.yellows < b.yellows ) return -1;
-    if ( a.yellows > b.yellows ) return 1;
     return Ranking.minimizeLongestMetric( a, b );
   }
 }
