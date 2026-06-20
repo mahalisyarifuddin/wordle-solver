@@ -1,16 +1,15 @@
-
 import guessWords from './guessWords.js';
-import { IS_HARD_MODE, isHardModeValidOptimized, getHardModeConstraints, perfectScore, score, getYellows } from './wordleCore.js';
+import { IS_HARD_MODE, isHardModeValidOptimized, getHardModeConstraints, perfectScore, score, getYellows, fastToScoreString, fastDecodeYellows, yellowsArray } from './wordleCore.js';
 import partition from './partition.js';
 
 class ComputationNode {
   constructor( words, guesses, possibleGuesses, skip = false, heuristic = new Heuristic() ) {
-    this.words = words; // {string[]}
-    this.guesses = guesses; // {string[]}
-    this.possibleGuesses = possibleGuesses; // {string[]}
+    this.words = words;
+    this.guesses = guesses;
+    this.possibleGuesses = possibleGuesses;
 
     this.guessSet = new Set();
-    this.guessNodes = []; // {GuessNode[]}
+    this.guessNodes = [];
     this.depth = Number.POSITIVE_INFINITY;
 
     if ( !skip ) {
@@ -18,13 +17,12 @@ class ComputationNode {
     }
   }
 
-  // @public
   merge( computationNode ) {
     computationNode.guessNodes.forEach( guessNode => {
-      if ( this.guessSet.has( guessNode.guess ) ) {
-        this.guessNodes.filter( g => g.guess === guessNode.guess )[ 0 ].merge( guessNode );
-      }
-      else {
+      const existing = this.guessNodes.find( g => g.guess === guessNode.guess );
+      if ( existing ) {
+        existing.merge( guessNode );
+      } else {
         this.guessNodes.push( guessNode );
         this.guessSet.add( guessNode.guess );
       }
@@ -32,7 +30,6 @@ class ComputationNode {
     this.depth = Math.min( ...this.guessNodes.map( guessNode => guessNode.depth ) );
   }
 
-  // @public
   serialize() {
     return {
       w: this.words,
@@ -42,7 +39,6 @@ class ComputationNode {
     };
   }
 
-  // @public
   static deserialize( obj, possibleGuesses = guessWords ) {
     const node = new ComputationNode( obj.w, obj.g, possibleGuesses, true );
     node.depth = obj.d;
@@ -53,13 +49,11 @@ class ComputationNode {
     return node;
   }
 
-  // @public
   createTree( metric = Ranking.minimizeLongestMetric ) {
+    if ( this.guessNodes.length === 0 ) throw new Error( "No guess nodes" );
     let subtree = this.guessNodes[ 0 ].createTree( metric );
-    // let solvesInSix = subtree.ranking.counts.length - this.guess.length <= 6;
     for ( let i = 1; i < this.guessNodes.length; i++ ) {
       const possibleSubtree = this.guessNodes[ i ].createTree( metric );
-      // const subSolvesInSix = possibleSubtree.ranking.counts.length - this.guess.length <= 6;
       if ( metric( possibleSubtree.ranking, subtree.ranking ) < 0 ) {
         subtree = possibleSubtree;
       }
@@ -67,8 +61,8 @@ class ComputationNode {
     return subtree;
   }
 
-  // @public - returns tree or null
   createLimitedTree( guessesLeft = 6, metric = Ranking.totalGuessesMetric ) {
+    if ( this.guessNodes.length === 0 ) return null;
     let subtree = this.guessNodes[ 0 ].createLimitedTree( guessesLeft, metric );
     for ( let i = 1; i < this.guessNodes.length; i++ ) {
       const possibleSubtree = this.guessNodes[ i ].createLimitedTree( guessesLeft, metric );
@@ -79,158 +73,76 @@ class ComputationNode {
     return subtree;
   }
 
-  // @public
   widen( heuristic ) {
     if ( this.depth > 1 ) {
-      if ( this.depth > 1 && Math.random() < 0.1 ) {
+      if ( Math.random() < 0.1 ) {
         this.openNext( heuristic );
-      }
-      else {
+      } else {
         const guessNode = this.guessNodes[ Math.floor( Math.random() * this.guessNodes.length ) ];
         guessNode.widen();
-
         this.depth = Math.min( this.depth, guessNode.depth );
       }
     }
   }
 
-  // @public
   depthOpen( heuristic ) {
-    if ( this.depth >= 1 ) {
-      this.openNext( heuristic );
-    }
+    if ( this.depth >= 1 ) this.openNext( heuristic );
     for ( let i = 0; i < this.guessNodes.length; i++ ) {
-      const guessNode = this.guessNodes[ i ];
-      guessNode.depthOpen( heuristic );
-      this.depth = Math.min( this.depth, guessNode.depth );
+      this.guessNodes[ i ].depthOpen( heuristic );
+      this.depth = Math.min( this.depth, this.guessNodes[ i ].depth );
     }
   }
 
-  // @public
   depthFix( heuristic ) {
     if ( this.depth === 1 ) {
-      let hasGoodGuess = false;
-      for ( let i = 0; i < this.guessNodes.length; i++ ) {
-        if ( this.words.includes( this.guessNodes[ i ].guess ) ) {
-          hasGoodGuess = true;
-          break;
-        }
-      }
-      if ( !hasGoodGuess ) {
+      if ( !this.guessNodes.some( g => this.words.includes( g.guess ) ) ) {
         this.openNext( heuristic );
       }
     }
     for ( let i = 0; i < this.guessNodes.length; i++ ) {
-      const guessNode = this.guessNodes[ i ];
-      guessNode.depthFix();
-      this.depth = Math.min( this.depth, guessNode.depth );
+      this.guessNodes[ i ].depthFix();
+      this.depth = Math.min( this.depth, this.guessNodes[ i ].depth );
     }
   }
 
-  // @public
-  openUp( level, heuristic ) {
-    if ( this.depth < level || level < 2 ) {
-      return;
-    }
-
-    this.openNext( heuristic );
-
-    this.guessNodes.forEach( ( guessNode, i ) => {
-      if ( level === 4 ) {
-        console.log( `${i} of ${this.guessNodes.length}: ${guessNode.guess}` );
-      }
-      for ( const score in guessNode.map ) {
-        const item = guessNode.map[ score ];
-        if ( typeof item !== 'string' ) {
-          item.openUp( level - 1, heuristic );
-        }
-      }
-      guessNode.recomputeDepth();
-      this.depth = Math.min( this.depth, guessNode.depth );
-    } );
-  }
-
-  // @public
-  targetedOpenTo( level, branches = { 3: 100, 2: 6 }, maxDepth = 7, heuristic ) {
-    if ( this.depth !== level || level < 2 ) {
-      return;
-    }
-
-    if ( this.guessNodes.length < branches[ level ] ) {
-      this.openNext( heuristic );
-    }
-
-    const guessNodes = this.guessNodes;
-
-    guessNodes.forEach( ( guessNode, i ) => {
-      guessNode.targetedOpenTo( level, branches, maxDepth, heuristic );
-      this.depth = Math.min( this.depth, guessNode.depth );
-    } );
-  }
-
-  // @public
   fullRecomputeDepth() {
-    this.depth = Math.min( ...this.guessNodes.map( guessNode => {
-      guessNode.fullRecomputeDepth();
-      return guessNode.depth;
+    this.depth = Math.min( ...this.guessNodes.map( g => {
+      g.fullRecomputeDepth();
+      return g.depth;
     } ) );
   }
 
-  // @public
   getOptions( heuristic ) {
     const options = [];
-
     for ( let i = 0; i < this.possibleGuesses.length; i++ ) {
       const guess = this.possibleGuesses[ i ];
-      if ( this.guessSet.has( guess ) ) {
-        continue;
-      }
-
+      if ( this.guessSet.has( guess ) || this.guesses.includes( guess ) ) continue;
       const map = partition( this.words, guess );
-      const heuristicScore = Heuristic.score( this.words, guess, map, heuristic, this.depth <= 3 );
-
-      options.push( new GuessOption( guess, map, heuristicScore ) );
+      options.push( new GuessOption( guess, map, Heuristic.score( this.words, guess, map, heuristic, true ) ) );
     }
-
-    // Ordered so we can pop
     options.sort( GuessOption.compare );
-
     return options;
   }
 
-  // @public
   getNextOption( heuristic ) {
     let bestOption = null;
-
     for ( let i = 0; i < this.possibleGuesses.length; i++ ) {
       const guess = this.possibleGuesses[ i ];
-      if ( this.guessSet.has( guess ) ) {
-        continue;
-      }
-
+      if ( this.guessSet.has( guess ) || this.guesses.includes( guess ) ) continue;
       const map = partition( this.words, guess );
-      const heuristicScore = Heuristic.score( this.words, guess, map, heuristic, this.depth <= 2 );
-
-      if ( !bestOption || heuristicScore < bestOption.size ) {
-        bestOption = new GuessOption( guess, map, heuristicScore );
+      const s = Heuristic.score( this.words, guess, map, heuristic, true );
+      if ( !bestOption || s < bestOption.size ) {
+        bestOption = new GuessOption( guess, map, s );
       }
     }
-
     return bestOption;
   }
 
-  // @public
-  openSpecificGuess( guess, heuristic ) {
-    if ( this.guessSet.has( guess ) ) {
-      return;
-    }
-
-    const option = new GuessOption( guess, partition( this.words, guess ), 1 );
-
-    this.openOption( option, heuristic );
+  openSpecificGuess( guess, heuristic, skipChildSearch = false ) {
+    if ( this.guessSet.has( guess ) ) return;
+    this.openOption( new GuessOption( guess, partition( this.words, guess ), 1 ), heuristic, skipChildSearch );
   }
 
-  // @public
   broaden( heuristic, n = 5 ) {
     const options = this.getOptions( heuristic );
     for ( let i = 0; i < Math.min( n, options.length ); i++ ) {
@@ -238,285 +150,167 @@ class ComputationNode {
     }
   }
 
-  // @private
   openNext( heuristic ) {
-    // if ( this.depth !== 1 ) {
-      const option = this.getNextOption( heuristic );
-      if ( option ) {
-        this.openOption( option, heuristic );
-      }
-    // }
+    const option = this.getNextOption( heuristic );
+    if ( option ) this.openOption( option, heuristic );
   }
 
-  // @private
-  openOption( option, heuristic ) {
-    const guesses = [ ...this.guesses, option.guess ];
-
-    const guessNode = new GuessNode( option, guesses, this.possibleGuesses, false, heuristic );
+  openOption( option, heuristic, skipChildSearch = false ) {
+    const guessNode = new GuessNode( option, [ ...this.guesses, option.guess ], this.possibleGuesses, false, heuristic, skipChildSearch );
     this.guessNodes.push( guessNode );
     this.guessSet.add( option.guess );
-
     this.depth = Math.min( this.depth, guessNode.depth );
   }
 }
+
 class GuessOption {
   constructor( guess, map, size ) {
     this.guess = guess;
     this.map = map;
     this.size = size;
   }
-
-  // @public
-  static compare( a, b ) {
-    return a.size > b.size ? 1 : ( a.size < b.size ? -1 : 0 );
-  }
+  static compare( a, b ) { return a.size - b.size; }
 }
+
 class GuessNode {
-  constructor( option, guesses, possibleGuesses, skip = false, heuristic = new Heuristic() ) {
+  constructor( option, guesses, possibleGuesses, skip = false, heuristic = new Heuristic(), skipChildSearch = false ) {
     this.guess = option.guess;
-    this.depth = 0; // wll be computed
-
+    this.depth = 0;
     const map = {};
-
     if ( !skip ) {
-      for ( const score in option.map ) {
-        const words = option.map[ score ];
+      for ( const rawScore in option.map ) {
+        const scoreString = fastToScoreString( rawScore );
+        const words = option.map[ rawScore ];
         if ( words.length === 1 ) {
-          map[ score ] = words[ 0 ];
-        }
-        else {
-          let newPossibleGuesses;
+          map[ scoreString ] = words[ 0 ];
+        } else {
+          let newPG = possibleGuesses;
           if ( IS_HARD_MODE ) {
-            const constraints = getHardModeConstraints( option.guess, score );
-            newPossibleGuesses = possibleGuesses.filter( guess => isHardModeValidOptimized( guess, constraints ) );
+            const constraints = getHardModeConstraints( option.guess, scoreString );
+            newPG = possibleGuesses.filter( g => isHardModeValidOptimized( g, constraints ) );
           }
-          else {
-            newPossibleGuesses = guessWords;
-          }
-          const node = new ComputationNode( option.map[ score ], guesses, newPossibleGuesses, false, heuristic );
-          map[ score ] = node;
+          map[ scoreString ] = new ComputationNode( words, guesses, newPG, skipChildSearch, heuristic );
         }
       }
     }
-
     this.map = map;
-
     this.recomputeDepth();
   }
 
-  // @public
   merge( guessNode ) {
     for ( const score in this.map ) {
       const item = this.map[ score ];
-      if ( typeof item !== 'string' ) {
-        item.merge( guessNode.map[ score ] );
-      }
+      if ( typeof item !== 'string' ) item.merge( guessNode.map[ score ] );
     }
     this.recomputeDepth();
     return this;
   }
 
-  get computationNodes() {
-    return Object.values( this.map ).filter( n => typeof n !== 'string' );
-  }
-
-  // @public
-  computationNodeCount( depth ) {
-    return this.computationNodes.filter( n => n.depth === depth ).length;
-  }
-
-  // @public
   depthOpen( heuristic ) {
     for ( const score in this.map ) {
       const item = this.map[ score ];
-      if ( typeof item !== 'string' ) {
-        item.depthOpen( heuristic );
-      }
+      if ( typeof item !== 'string' ) item.depthOpen( heuristic );
     }
     this.recomputeDepth();
   }
 
-  // @public
   depthFix( heuristic ) {
     for ( const score in this.map ) {
       const item = this.map[ score ];
-      if ( typeof item !== 'string' ) {
-        item.depthFix( heuristic );
-      }
+      if ( typeof item !== 'string' ) item.depthFix( heuristic );
     }
     this.recomputeDepth();
   }
 
-  // @public
-  targetedOpenTo( level, branches, maxDepth, heuristic ) {
+  recomputeDepth() {
+    let d = 0;
     for ( const score in this.map ) {
       const item = this.map[ score ];
-      if ( typeof item !== 'string' ) {
-        item.targetedOpenTo( level - 1, branches, maxDepth, heuristic );
-      }
+      d = Math.max( d, 1 + ( typeof item === 'string' ? 0 : item.depth ) );
     }
-    this.recomputeDepth();
+    this.depth = d;
   }
 
-  // @public
-  recomputeDepth() {
-    let depth = 0;
-
-    for ( const score in this.map ) {
-      const stringOrComputationNode = this.map[ score ];
-      if ( typeof stringOrComputationNode === 'string' ) {
-        depth = Math.max( depth, 1 );
-      }
-      else {
-        depth = Math.max( depth, 1 + stringOrComputationNode.depth );
-      }
-    }
-
-    this.depth = depth;
-  }
-
-  // @public
   fullRecomputeDepth() {
     for ( const score in this.map ) {
-      const stringOrComputationNode = this.map[ score ];
-      if ( typeof stringOrComputationNode !== 'string' ) {
-        stringOrComputationNode.fullRecomputeDepth();
-      }
+      const item = this.map[ score ];
+      if ( typeof item !== 'string' ) item.fullRecomputeDepth();
     }
     this.recomputeDepth();
   }
 
-  // @public
-  openGuesses( guesses, heuristic ) {
-    if ( guesses[ 0 ] === this.guess && guesses.length > 1 ) {
-      const nextGuess = guesses[ 1 ];
-      const next = this.map[ score( guesses[ guesses.length - 1 ], this.guess ) ];
-      if ( typeof next !== 'string' && next ) {
-        next.openSpecificGuess( nextGuess, heuristic );
-        const guessNode = next.guessNodes.filter( guessNode => guessNode.guess === nextGuess )[ 0 ];
-        guessNode.openGuesses( guesses.slice( 1 ), heuristic );
-      }
-    }
-  }
-
-  // @public
   serialize() {
     const m = {};
     for ( const score in this.map ) {
-      const nodeOrString = this.map[ score ];
-      m[ score ] = typeof nodeOrString === 'string' ? nodeOrString : nodeOrString.serialize();
+      const item = this.map[ score ];
+      m[ score ] = typeof item === 'string' ? item : item.serialize();
     }
-    return {
-      g: this.guess,
-      d: this.depth,
-      m: m
-    };
+    return { g: this.guess, d: this.depth, m: m };
   }
 
-  // @public
   static deserialize( obj, possibleGuesses = guessWords ) {
-    const guessNode = new GuessNode( { guess: obj.g }, [], [], true, new Heuristic() );
+    const guessNode = new GuessNode( { guess: obj.g }, [], [], true );
     guessNode.depth = obj.d;
-
     const map = {};
     for ( const score in obj.m ) {
       const item = obj.m[ score ];
-
-      let newPossibleGuesses;
+      let newPG = possibleGuesses;
       if ( IS_HARD_MODE ) {
         const constraints = getHardModeConstraints( obj.g, score );
-        newPossibleGuesses = possibleGuesses.filter( guess => isHardModeValidOptimized( guess, constraints ) );
+        newPG = possibleGuesses.filter( g => isHardModeValidOptimized( g, constraints ) );
       }
-      else {
-        newPossibleGuesses = possibleGuesses;
-      }
-      map[ score ] = typeof item === 'string' ? item : ComputationNode.deserialize( item, newPossibleGuesses );
+      map[ score ] = typeof item === 'string' ? item : ComputationNode.deserialize( item, newPG );
     }
     guessNode.map = map;
     return guessNode;
   }
 
-  // @public
   createTree( metric = Ranking.minimizeLongestMetric ) {
     const map = {};
     const ranking = new Ranking();
-
-    for ( const score in this.map ) {
-      const stringOrComputationNode = this.map[ score ];
-      const isString = typeof stringOrComputationNode === 'string';
-      const subtree = isString ? stringOrComputationNode : stringOrComputationNode.createTree( metric );
-      map[ score ] = subtree;
-      if ( score === perfectScore ) {
+    for ( const scoreString in this.map ) {
+      const item = this.map[ scoreString ];
+      const isString = typeof item === 'string';
+      const subtree = isString ? item : item.createTree( metric );
+      map[ scoreString ] = subtree;
+      if ( scoreString === '22222' ) {
         ranking.addSelf();
-      }
-      else if ( isString ) {
-        ranking.addString( getYellows( score ) );
-      }
-      else {
-        ranking.addRanking( subtree.ranking, getYellows( score ) );
+      } else {
+        const yellows = getYellows( scoreString );
+        if ( isString ) ranking.addString( yellows );
+        else ranking.addRanking( subtree.ranking, yellows );
       }
     }
-
-    return {
-      guess: this.guess,
-      map: map,
-      depth: this.depth,
-      ranking: ranking
-    };
+    return { guess: this.guess, map: map, depth: this.depth, ranking: ranking };
   }
 
-  // @public
   createLimitedTree( guessesLeft = 6, metric = Ranking.totalGuessesMetric ) {
     const map = {};
     const ranking = new Ranking();
-
-    for ( const score in this.map ) {
-      const isPerfect = score === perfectScore;
-      if ( guessesLeft === 1 && !isPerfect ) {
-        return null;
-      }
-
-      const stringOrComputationNode = this.map[ score ];
-      const isString = typeof stringOrComputationNode === 'string';
-      const subtree = isString ? stringOrComputationNode : stringOrComputationNode.createLimitedTree( guessesLeft - 1, metric );
-      if ( !subtree ) {
-        return null;
-      }
-      map[ score ] = subtree;
-      if ( score === perfectScore ) {
+    for ( const scoreString in this.map ) {
+      if ( guessesLeft === 1 && scoreString !== '22222' ) return null;
+      const item = this.map[ scoreString ];
+      const isString = typeof item === 'string';
+      const subtree = isString ? item : item.createLimitedTree( guessesLeft - 1, metric );
+      if ( !subtree ) return null;
+      map[ scoreString ] = subtree;
+      if ( scoreString === '22222' ) {
         ranking.addSelf();
-      }
-      else if ( isString ) {
-        ranking.addString( getYellows( score ) );
-      }
-      else {
-        ranking.addRanking( subtree.ranking, getYellows( score ) );
+      } else {
+        const yellows = getYellows( scoreString );
+        if ( isString ) ranking.addString( yellows );
+        else ranking.addRanking( subtree.ranking, yellows );
       }
     }
-
-    return {
-      guess: this.guess,
-      map: map,
-      depth: this.depth,
-      ranking: ranking
-    };
+    return { guess: this.guess, map: map, depth: this.depth, ranking: ranking };
   }
 
-  // @public
   widen() {
-    let worstDepth = 0;
-    for ( const score in this.map ) {
-      const node = this.map[ score ];
-      if ( typeof node !== 'string' ) {
-        worstDepth = Math.max( worstDepth, node.depth );
-      }
-    }
-
-    const values = Object.values( this.map ).filter( node => node.depth === worstDepth );
-    // TODO: better optimized
-    const node = values[ Math.floor( Math.random() * values.length ) ];
-    node.widen();
-
+    const nodes = Object.values( this.map ).filter( n => typeof n !== 'string' );
+    if ( nodes.length === 0 ) return;
+    const maxD = Math.max( ...nodes.map( n => n.depth ) );
+    const candidates = nodes.filter( n => n.depth === maxD );
+    candidates[ Math.floor( Math.random() * candidates.length ) ].widen();
     this.recomputeDepth();
   }
 }
@@ -528,46 +322,20 @@ class Heuristic {
     this.nextWeight = nextWeight;
     this.yellowWeight = yellowWeight;
   }
-
-  // @public
   static score( words, guess, map, heuristic, skipNext ) {
-    const averageWeight = heuristic.averageWeight;
-    const bestWeight = heuristic.bestWeight;
-    const nextWeight = heuristic.nextWeight;
-    const yellowWeight = heuristic.yellowWeight;
-
     let count = 0;
     let best = 0;
-    let bestScore = '22222';
     let totalYellows = 0;
-    for ( const score in map ) {
-      const length = map[ score ].length;
-      if ( best < length ) {
-        best = length;
-        bestScore = score;
-      }
+    for ( const rawScore in map ) {
+      const length = map[ rawScore ].length;
       best = Math.max( best, length );
-      count += 1;
-      totalYellows += getYellows( score ) * length;
+      count++;
+      totalYellows += yellowsArray[ rawScore ] * length;
     }
+    if ( count === 1 && words.length > 1 ) return 1e6;
     const isTarget = words.includes( guess );
-    const remainingWords = words.length - ( isTarget ? 1 : 0 );
-
-    let size = averageWeight * remainingWords / ( count ) + bestWeight * best + yellowWeight * totalYellows / words.length; // average length weighted in as a third
-    if ( !skipNext && nextWeight && map[ bestScore ].length > 1 ) {
-      const subWords = map[ bestScore ];
-      let minSub = Number.POSITIVE_INFINITY;
-      for ( let i = 0; i < guessWords.length; i++ ) {
-        const guessWord = guessWords[ i ];
-        const subPart = partition( subWords, guessWord );
-        minSub = Math.min( minSub, Heuristic.score( subWords, guessWord, subPart, heuristic, true ) );
-      }
-      size += minSub * nextWeight;
-    }
-    if ( isTarget ) {
-      // Prefer guesses that are words
-      size -= 10;
-    }
+    let size = heuristic.averageWeight * ( words.length - ( isTarget ? 1 : 0 ) ) / count + heuristic.bestWeight * best + heuristic.yellowWeight * totalYellows / words.length;
+    if ( isTarget ) size -= 10;
     return size;
   }
 }
@@ -577,96 +345,38 @@ class Ranking {
     this.counts = counts;
     this.yellows = yellows;
   }
-
-  // @public
-  addString( yellows = 0 ) {
-    this.counts[ 1 ]++;
-    this.yellows += yellows;
-  }
-
-  // @public
-  addSelf() {
-    this.counts[ 0 ]++;
-  }
-
-  // @public -- child ranking
+  addString( yellows = 0 ) { this.counts[ 1 ]++; this.yellows += yellows; }
+  addSelf() { this.counts[ 0 ]++; }
   addRanking( ranking, yellows = 0 ) {
     const count = ranking.counts.reduce( ( a, b ) => a + b, 0 );
     this.yellows += ranking.yellows + yellows * count;
     for ( let i = 0; i < ranking.counts.length; i++ ) {
-      if ( i + 1 >= this.counts.length ) {
-        this.counts.push( 0 );
-      }
+      if ( i + 1 >= this.counts.length ) this.counts.push( 0 );
       this.counts[ i + 1 ] += ranking.counts[ i ];
     }
   }
-
-  // @public
   totalGuessesScore() {
-    let count = 0;
-    for ( let i = 0; i < this.counts.length; i++ ) {
-      count += this.counts[ i ] * ( i + 1 );
-    }
-    return count;
+    let c = 0;
+    for ( let i = 0; i < this.counts.length; i++ ) c += this.counts[ i ] * ( i + 1 );
+    return c;
   }
-
-  // @public
   static minimizeLongestMetric( a, b ) {
-    if ( a.counts.length < b.counts.length ) {
-      return -1;
-    }
-    if ( a.counts.length > b.counts.length ) {
-      return 1;
-    }
+    if ( a.counts.length !== b.counts.length ) return a.counts.length - b.counts.length;
     for ( let i = a.counts.length - 1; i >= 0; i-- ) {
-      if ( a.counts[ i ] < b.counts[ i ] ) {
-        return -1;
-      }
-      if ( a.counts[ i ] > b.counts[ i ] ) {
-        return 1;
-      }
+      if ( a.counts[ i ] !== b.counts[ i ] ) return a.counts[ i ] - b.counts[ i ];
     }
     return 0;
   }
-
-  // @public
   static totalGuessesMetric( a, b ) {
-    const aScore = a.totalGuessesScore();
-    const bScore = b.totalGuessesScore();
-    return aScore < bScore ? -1 : ( aScore > bScore ? 1 : Ranking.minimizeLongestMetric( a, b ) );
+    const diff = a.totalGuessesScore() - b.totalGuessesScore();
+    return diff !== 0 ? diff : Ranking.minimizeLongestMetric( a, b );
   }
-
-  // @public
   static minimizeYellowsMetric( a, b ) {
-    const aScore = a.totalGuessesScore();
-    const bScore = b.totalGuessesScore();
-    if ( aScore < bScore ) return -1;
-    if ( aScore > bScore ) return 1;
-    if ( a.yellows < b.yellows ) return -1;
-    if ( a.yellows > b.yellows ) return 1;
+    const aScore = a.totalGuessesScore() + a.yellows;
+    const bScore = b.totalGuessesScore() + b.yellows;
+    if ( aScore !== bScore ) return aScore - bScore;
     return Ranking.minimizeLongestMetric( a, b );
   }
 }
-const treeStatistics = tree => {
-  const counts = {};
 
-  const recurse = ( node, length ) => {
-    if ( typeof node === 'string' ) {
-      if ( length in counts ) {
-        counts[ length ]++;
-      }
-      else {
-        counts[ length ] = 1;
-      }
-    }
-    else {
-      for ( const score in node.map ) {
-        recurse( node.map[ score ], length + 1 );
-      }
-    }
-  };
-  recurse( tree, 1 );
-  return counts;
-};
-
-export { ComputationNode, GuessNode, GuessOption, treeStatistics, Ranking, Heuristic };
+export { ComputationNode, GuessNode, GuessOption, Ranking, Heuristic };

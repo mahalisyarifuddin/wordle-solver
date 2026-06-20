@@ -215,4 +215,9 @@ const fastDecodeYellows = n => {
   return yellows;
 };
 
-export { score, perfectScore, encode, decode, IS_HARD_MODE, setHardMode, LENGTH, ABSENT, PRESENT, CORRECT, fastScore, fastDoesFullyPartition, fastPartition, fastDecode, fastToScoreString, isHardModeValid, getYellows, getHardModeConstraints, isHardModeValidOptimized, fastDecodeYellows };
+const yellowsArray = new Uint8Array( 243 );
+for ( let i = 0; i < 243; i++ ) {
+  yellowsArray[ i ] = fastDecodeYellows( i );
+}
+
+export { score, perfectScore, encode, decode, IS_HARD_MODE, setHardMode, LENGTH, ABSENT, PRESENT, CORRECT, fastScore, fastDoesFullyPartition, fastPartition, fastDecode, fastToScoreString, isHardModeValid, getYellows, getHardModeConstraints, isHardModeValidOptimized, fastDecodeYellows, yellowsArray };
