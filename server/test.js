@@ -25,8 +25,8 @@ setHardMode( false );
 node = new ComputationNode( targetWords, [], guessWords, true );
 node.openSpecificGuess( testStarter );
 
-const greensHeuristic = new Heuristic( 100, 1, 0, 50 );
-node.guessNodes[ 0 ].map[ '00000' ].broaden( greensHeuristic, 10 );
+const greensHeuristic = new Heuristic( 100, 1, 0, 1000 );
+node.guessNodes[ 0 ].map[ '00000' ].broaden( greensHeuristic, 30 );
 
 tree = node.guessNodes[ 0 ].createTree( Ranking.minimizeYellowsMetric );
 console.log( `Sea of Greens ${testStarter} ranking:`, tree.ranking.counts, 'Yellows:', tree.ranking.yellows );
