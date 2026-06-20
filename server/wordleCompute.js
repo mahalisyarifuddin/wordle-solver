@@ -372,10 +372,8 @@ class Ranking {
     return diff !== 0 ? diff : Ranking.minimizeLongestMetric( a, b );
   }
   static minimizeYellowsMetric( a, b ) {
-    const aGuesses = a.totalGuessesScore();
-    const bGuesses = b.totalGuessesScore();
-    const aScore = aGuesses + 100 * a.yellows;
-    const bScore = bGuesses + 100 * b.yellows;
+    const aScore = a.totalGuessesScore() + a.yellows;
+    const bScore = b.totalGuessesScore() + b.yellows;
     if ( aScore !== bScore ) return aScore - bScore;
     return Ranking.minimizeLongestMetric( a, b );
   }

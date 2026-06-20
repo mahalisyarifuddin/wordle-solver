@@ -42,7 +42,7 @@ const generate = async ( starter, metric, name, hardMode = false ) => {
     const branches = Object.entries( guessNode.map ).filter( ( [ s, n ] ) => typeof n !== 'string' );
     console.log( `Parallelizing ${branches.length} branches...` );
 
-    const hParams = [ 100, 1, 0, 1000 ];
+    const hParams = [ 100, 1, 0, 10 ];
 
     const batchSize = 20;
     for ( let i = 0; i < branches.length; i += batchSize ) {
