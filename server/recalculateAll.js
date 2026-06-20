@@ -87,7 +87,7 @@ const task = process.argv[ 2 ];
 
 ( async () => {
   if ( task === 'greens' ) {
-    const starters = [ 'slant', 'crane', 'salet' ];
+    const starters = [ 'seine', 'soily', 'soree', 'slant', 'salet' ];
     for ( const s of starters ) {
       await generate( s, Ranking.minimizeYellowsMetric, `${s}.tree.greens` );
       await generate( s, Ranking.minimizeYellowsMetric, `${s}.tree.hard.greens`, true );

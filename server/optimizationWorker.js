@@ -14,9 +14,9 @@ const h = new Heuristic( ...heuristicParams );
 const node = new ComputationNode( words, guesses, possibleGuesses, true );
 
 if ( words.length > 50 ) {
-  node.broaden( h, 10 );
+  node.broaden( h, 30 );
 } else {
-  node.broaden( h, 20 );
+  node.broaden( h, 50 );
 }
 
 if ( depth > 0 ) {
