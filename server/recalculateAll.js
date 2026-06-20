@@ -87,8 +87,11 @@ const task = process.argv[ 2 ];
 
 ( async () => {
   if ( task === 'greens' ) {
-    await generate( 'salet', Ranking.minimizeYellowsMetric, 'salet.tree.greens' );
-    await generate( 'salet', Ranking.minimizeYellowsMetric, 'salet.tree.hard.greens', true );
+    const starters = [ 'slant', 'crane', 'salet' ];
+    for ( const s of starters ) {
+      await generate( s, Ranking.minimizeYellowsMetric, `${s}.tree.greens` );
+      await generate( s, Ranking.minimizeYellowsMetric, `${s}.tree.hard.greens`, true );
+    }
   } else if ( task === 'total' ) {
     const starters = [ 'salet', 'reast', 'crate', 'trace', 'slate', 'crane' ];
     for ( const s of starters ) await generate( s, Ranking.totalGuessesMetric, `${s}.tree.total` );

@@ -51,7 +51,7 @@
     import hardSaletTree from './data/salet.tree.hard.js';
     import hardCrampTree from './data/cramp.tree.hard.js';
     import greensSaletTree from './data/salet.tree.greens.js';
-    import greensHardSaletTree from './data/salet.tree.hard.greens.js';
+    import greensHardSlantTree from './data/slant.tree.hard.greens.js';
     import targetWords from './data/targetWords.js';
 
     const fontFamily = "'Clear Sans', 'Helvetica Neue', Arial, sans-serif";
@@ -378,7 +378,7 @@
               children: [
                 new scenery.Text( 'Sea of Greens', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
                 createTreeButton( greensSaletTree, 'SALET' ),
-                createTreeButton( greensHardSaletTree, 'SALET (Hard)' )
+                createTreeButton( greensHardSlantTree, 'SLANT (Hard)' )
               ]
             } ),
           ]
