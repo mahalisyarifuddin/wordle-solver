@@ -9171,7 +9171,7 @@ const targetWords = [ 'cigar', 'rebut', 'sissy', 'humph', 'awake', 'blush', 'foc
     }
 
     class WordNode extends scenery.FlowBox {
-      constructor( tree, words, depth, options ) {
+      constructor( tree, words, depth, history = [], options ) {
         options = phetCore.merge( {
           orientation: 'vertical',
           spacing: 2
@@ -9223,6 +9223,30 @@ const targetWords = [ 'cigar', 'rebut', 'sissy', 'humph', 'awake', 'blush', 'foc
           this.addChild( new scenery.Text( `solved`, { fontSize: 14, fontFamily: fontFamily, fill: gray, layoutOptions: { topMargin: 5 } } ) );
         }
 
+        const copyButton = new scenery.Text( 'Copy as text', {
+          fontSize: 14,
+          fontFamily: fontFamily,
+          fill: 'rgb(27,0,241)',
+          cursor: 'pointer',
+          layoutOptions: { topMargin: 5 }
+        } );
+        copyButton.addInputListener( new scenery.FireListener( {
+          fire: () => {
+            const currentHistory = [ ...history, { guess, score: scoreProperty.value } ];
+            const text = currentHistory.map( entry => {
+              return entry.guess.split( '' ).map( ( letter, i ) => {
+                const color = { 0: 'black', 1: 'yellow', 2: 'green' }[ entry.score[ i ] ];
+                return `${letter.toUpperCase()}(${color})`;
+              } ).join( ' ' );
+            } ).join( '\n' );
+            navigator.clipboard.writeText( text );
+
+            copyButton.fill = black;
+            setTimeout( () => { copyButton.fill = 'rgb(27,0,241)'; }, 1000 );
+          }
+        } ) );
+        this.addChild( copyButton );
+
         if ( !isLeaf ) {
           this.addChild( new WordOptionsNode( tree, words, depth, scoreProperty ) );
         }
@@ -9240,7 +9264,7 @@ const targetWords = [ 'cigar', 'rebut', 'sissy', 'humph', 'awake', 'blush', 'foc
               childNode.children = [ new scenery.Text( 'no match found', { fontSize: 14, fontFamily: fontFamily, fill: gray } ) ];
             }
             else if ( score !== '22222' ) {
-              childNode.children = [ new WordNode( tree.map[ score ], words.filter( word => computeScore( word, guess ) === score ), depth + 1 ) ];
+              childNode.children = [ new WordNode( tree.map[ score ], words.filter( word => computeScore( word, guess ) === score ), depth + 1, [ ...history, { guess, score } ] ) ];
             }
             else {
               childNode.children = [];
