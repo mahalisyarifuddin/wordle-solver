@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <title>Wordle Solver</title>
+  <link rel="icon" href="data:,"/>
 
   <script src="https://code.jquery.com/jquery-2.1.0.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.4/lodash.min.js"></script>
@@ -14,14 +15,19 @@
   <script src="lib/himalaya-1.1.0.js"></script>
   <script src="lib/flatqueue-1.2.1.js"></script>
 
-<!--  <script src="../assert/js/assert.js"></script>-->
-<!--  <script src="../tandem/js/PhetioIDUtils.js"></script>-->
-
   <style>
     html, body {
       background-color: #fff;
       border: 0;
       padding: 0;
+      /* allow touch scrolling/zooming on mobile; the solver only needs taps */
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: rgba( 0, 0, 0, 0 );
+    }
+    /* scenery sets touch-action:none inline on its display element, which would
+       block page scrolling on phones. Override it (taps still work fine). */
+    #main {
+      touch-action: manipulation !important;
     }
   </style>
 </head>
@@ -50,8 +56,16 @@
     import minRonteTree from './data/ronte.tree.js';
     import hardSaletTree from './data/salet.tree.hard.js';
     import hardCrampTree from './data/cramp.tree.hard.js';
+    import hardSlateTree from './data/slate.tree.hard.js';
+    import hardLeastTree from './data/least.tree.hard.js';
+    import hardTraceTree from './data/trace.tree.hard.js';
+    import hardLeantTree from './data/leant.tree.hard.js';
+    import greensSoilyTree from './data/soily.tree.greens.js';
     import greensSeineTree from './data/seine.tree.greens.js';
+    import greensSaiceTree from './data/saice.tree.greens.js';
     import greensHardSeineTree from './data/seine.tree.hard.greens.js';
+    import greensHardSliceTree from './data/slice.tree.hard.greens.js';
+    import greensHardShinyTree from './data/shiny.tree.hard.greens.js';
     import targetWords from './data/targetWords.js';
 
     const fontFamily = "'Clear Sans', 'Helvetica Neue', Arial, sans-serif";
@@ -258,6 +272,30 @@
           cursor: 'pointer',
           layoutOptions: { topMargin: 5 }
         } );
+        const copyText = text => {
+          // navigator.clipboard requires a secure context (https or localhost);
+          // fall back to the execCommand path for file:// or http:// (e.g. opening
+          // the standalone from a phone's downloads folder).
+          if ( navigator.clipboard && window.isSecureContext ) {
+            return navigator.clipboard.writeText( text ).catch( () => copyTextFallback( text ) );
+          }
+          return copyTextFallback( text );
+        };
+        const copyTextFallback = text => {
+          const textarea = document.createElement( 'textarea' );
+          textarea.value = text;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild( textarea );
+          textarea.select();
+          try {
+            document.execCommand( 'copy' );
+          }
+          catch ( e ) {
+            // ignore - nothing else we can do
+          }
+          document.body.removeChild( textarea );
+        };
         copyButton.addInputListener( new scenery.FireListener( {
           fire: () => {
             const currentHistory = [ ...history, { guess, score: scoreProperty.value } ];
@@ -267,7 +305,7 @@
                 return `${letter.toUpperCase()}(${color})`;
               } ).join( ' ' );
             } ).join( '\n' );
-            navigator.clipboard.writeText( text );
+            copyText( text );
 
             copyButton.fill = black;
             setTimeout( () => { copyButton.fill = 'rgb(27,0,241)'; }, 1000 );
@@ -394,6 +432,10 @@
               children: [
                 new scenery.Text( 'Hard Mode', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
                 createTreeButton( hardSaletTree ),
+                createTreeButton( hardSlateTree ),
+                createTreeButton( hardLeastTree ),
+                createTreeButton( hardTraceTree ),
+                createTreeButton( hardLeantTree ),
                 createTreeButton( hardCrampTree )
               ]
             } ),
@@ -401,8 +443,12 @@
               orientation: 'vertical',
               children: [
                 new scenery.Text( 'Sea of Greens', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
+                createTreeButton( greensSoilyTree, 'SOILY' ),
                 createTreeButton( greensSeineTree, 'SEINE' ),
-                createTreeButton( greensHardSeineTree, 'SEINE (Hard)' )
+                createTreeButton( greensSaiceTree, 'SAICE' ),
+                createTreeButton( greensHardSeineTree, 'SEINE (Hard)' ),
+                createTreeButton( greensHardSliceTree, 'SLICE (Hard)' ),
+                createTreeButton( greensHardShinyTree, 'SHINY (Hard)' )
               ]
             } ),
           ]
