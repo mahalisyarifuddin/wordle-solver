@@ -99,7 +99,7 @@ const task = process.argv[ 2 ];
     const minStarters = [ 'rance', 'rants', 'rated', 'ronte', 'alter', 'lance' ];
     for ( const s of minStarters ) await generate( s, Ranking.minimizeLongestMetric, `${s}.tree` );
   } else if ( task === 'hard' ) {
-    const hardStarters = [ 'salet', 'cramp' ];
+    const hardStarters = [ 'salet', 'slate', 'least', 'trace', 'leant', 'cramp' ];
     for ( const s of hardStarters ) await generate( s, Ranking.totalGuessesMetric, `${s}.tree.hard`, true );
   } else {
     console.log( 'Specify task: greens, total, min, hard' );
