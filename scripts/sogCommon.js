@@ -1,9 +1,13 @@
 // Shared library for the Sea of Greens deep search.
-// - Precomputed targetWords x guessWords score matrix (SharedArrayBuffer-backed)
+// - Precomputed targetWords x guessWords score matrix (SharedArrayBuffer-backed).
+//   Layout is guess-major (m[g * NT + t]) so per-guess scans read
+//   contiguous memory; this is ~2.5x faster than the old target-major layout.
 // - Static candidate ordering for all guess words
 // - Deep per-starter evaluation: 2-ply lookahead with calibrated estG/estY tables,
 //   in-bucket words always included as candidates (exact near leaves)
 import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import targetWords from '../data/targetWords.js';
 import guessWords from '../server/guessWords.js';
 import { fastScore, yellowsArray, isHardModeValidOptimized, getHardModeConstraints } from '../server/wordleCore.js';
@@ -20,13 +24,36 @@ export const t2g = new Int32Array( NT );
   for ( let i = 0; i < NT; i++ ) t2g[ i ] = map.get( targetWords[ i ] );
 }
 
+// Disk-cached score matrix. The cache lives in computed/ (gitignored) so the
+// many stages of a recompute (scans, tree builds, recalc) share one build.
+// The filename encodes NT x NG, so it auto-invalidates if the dictionary changes.
+const rootDir = path.dirname( path.dirname( fileURLToPath( import.meta.url ) ) );
+const MATRIX_CACHE = path.join( rootDir, 'computed', `scores-${NT}x${NG}.bin` );
+
 export const buildMatrix = ( buffer = null ) => {
+  if ( !buffer && process.env.NO_MATRIX_CACHE === undefined ) {
+    try {
+      const data = fs.readFileSync( MATRIX_CACHE );
+      if ( data.length === NT * NG ) {
+        const buf = new SharedArrayBuffer( NT * NG );
+        new Uint8Array( buf ).set( data );
+        return buf;
+      }
+    }
+    catch ( e ) {
+      // no cache yet - build below
+    }
+  }
   const buf = buffer || new SharedArrayBuffer( NT * NG );
   const m = new Uint8Array( buf );
-  for ( let t = 0; t < NT; t++ ) {
-    const base = t * NG;
-    const w = targetWords[ t ];
-    for ( let g = 0; g < NG; g++ ) m[ base + g ] = fastScore( w, guessWords[ g ] );
+  for ( let g = 0; g < NG; g++ ) {
+    const base = g * NT;
+    const w = guessWords[ g ];
+    for ( let t = 0; t < NT; t++ ) m[ base + t ] = fastScore( targetWords[ t ], w );
+  }
+  if ( !buffer && process.env.NO_MATRIX_CACHE === undefined ) {
+    fs.mkdirSync( path.dirname( MATRIX_CACHE ), { recursive: true } );
+    fs.writeFileSync( MATRIX_CACHE, Buffer.from( m ) );
   }
   return buf;
 };
@@ -38,10 +65,11 @@ export const buildStaticOrder = matrix => {
   const ent = new Float64Array( NG );
   const cnt = new Int32Array( 243 );
   for ( let g = 0; g < NG; g++ ) {
+    const base = g * NT;
     cnt.fill( 0 );
     let y = 0;
     for ( let t = 0; t < NT; t++ ) {
-      const s = matrix[ t * NG + g ];
+      const s = matrix[ base + t ];
       cnt[ s ]++;
       y += yellowsArray[ s ];
     }
@@ -63,7 +91,7 @@ export const buildStaticOrder = matrix => {
 };
 
 export const loadCalib = ( variant = 'best25' ) => {
-  const c = JSON.parse( fs.readFileSync( 'data/calib.json', 'utf8' ) );
+  const c = JSON.parse( fs.readFileSync( path.join( rootDir, 'data/calib.json' ), 'utf8' ) );
   const mk = o => { const g = new Float64Array( o.g ); const y = new Float64Array( o.y ); g[ 1 ] = 1; y[ 1 ] = 0; return { g, y }; };
   return { normal: mk( c.normal[ variant ] ), hard: mk( c.hard[ variant ] ) };
 };
@@ -81,22 +109,37 @@ const budgetFor = ( len, candK ) => {
   return Math.max( 30, Math.min( candK, Math.round( len * 4 ) ) );
 };
 
+// Per-worker scratch state. All buffers are reused across starter evaluations
+// (avoiding ~15k small allocations during a full-dictionary scan).
+// { arr, v } = monotonic generation-stamp dedupe (shared across calls; never cleared).
+export const newSeenState = () => ( {
+  arr: new Int32Array( NG ), v: 0,
+  cnt: new Int32Array( 243 ),
+  bucketBase: new Int32Array( 243 ),
+  bucketLen: new Int32Array( 243 ),
+  flat: new Int32Array( NT ),
+  cnt2: new Int32Array( 243 ),
+  touched: new Int32Array( 243 )
+} );
+
 // Evaluate one starter (guess index g) under the 1:1 (guesses+yellows) objective.
 // Returns { e: expectedGuesses, y: expectedYellows } using 2-ply lookahead with est tables.
 // mode: 'normal' | 'hard'. candK: candidate budget (number or 'full').
-// st: optional {arr, v} state with monotonic generation stamps (shared across calls; never cleared).
-export const newSeenState = () => ( { arr: new Int32Array( NG ), v: 0 } );
+// st: optional per-worker scratch state from newSeenState().
 export const evalStarter = ( g, matrix, calib, mode, candK = 600, st = null, yw = 1 ) => {
   const est = calib[ mode ];
-  const cnt = new Int32Array( 243 );
-  const cnt2 = new Int32Array( 243 );
-  const yel2 = new Int32Array( 243 );
+  if ( !st ) st = newSeenState();
+  const seenGen = st.arr;
+  const cnt = st.cnt;
+  const cnt2 = st.cnt2;
+  const touched = st.touched;
+  const bucketBase = st.bucketBase;
+  const bucketLen = st.bucketLen;
+  const flat = st.flat;
+  const baseG = g * NT;
   // flat bucket storage for this starter: targets grouped by score
-  const bucketBase = new Int32Array( 243 );
-  const bucketLen = new Int32Array( 243 );
-  const flat = new Int32Array( NT );
   cnt.fill( 0 );
-  for ( let t = 0; t < NT; t++ ) cnt[ matrix[ t * NG + g ] ]++;
+  for ( let t = 0; t < NT; t++ ) cnt[ matrix[ baseG + t ] ]++;
   let off = 0;
   for ( let s = 0; s < 243; s++ ) {
     bucketBase[ s ] = off;
@@ -105,12 +148,9 @@ export const evalStarter = ( g, matrix, calib, mode, candK = 600, st = null, yw 
   }
   cnt.fill( 0 );
   for ( let t = 0; t < NT; t++ ) {
-    const s = matrix[ t * NG + g ];
+    const s = matrix[ baseG + t ];
     flat[ bucketBase[ s ] + cnt[ s ]++ ] = t;
   }
-
-  if ( !st ) st = newSeenState();
-  const seenGen = st.arr;
 
   let E = 1; // the starter guess itself
   let Y = 0;
@@ -138,7 +178,7 @@ export const evalStarter = ( g, matrix, calib, mode, candK = 600, st = null, yw 
       const gi = t2g[ flat[ base + i ] ];
       if ( gi === g || seenGen[ gi ] === gen ) continue;
       seenGen[ gi ] = gen;
-      const r = evalCandidate( flat, base, len, gi, matrix, est, cnt2, yel2, hardConstraint );
+      const r = evalCandidate( flat, base, len, gi, matrix, est, cnt2, touched, hardConstraint );
       const j = r.E + yw * r.Y;
       if ( j < bestJoint ) { bestJoint = j; bestE = r.E; bestY = r.Y; }
     }
@@ -147,7 +187,7 @@ export const evalStarter = ( g, matrix, calib, mode, candK = 600, st = null, yw 
       const gi = staticOrder[ k ];
       if ( gi === g || seenGen[ gi ] === gen ) continue;
       seenGen[ gi ] = gen;
-      const r = evalCandidate( flat, base, len, gi, matrix, est, cnt2, yel2, hardConstraint );
+      const r = evalCandidate( flat, base, len, gi, matrix, est, cnt2, touched, hardConstraint );
       const j = r.E + yw * r.Y;
       if ( j < bestJoint ) { bestJoint = j; bestE = r.E; bestY = r.Y; }
     }
@@ -160,25 +200,27 @@ export const evalStarter = ( g, matrix, calib, mode, candK = 600, st = null, yw 
 };
 
 // Evaluate candidate guess gi for bucket (flat[base..base+len)): 2-ply joint cost.
+// Uses a single pass over the bucket; cnt2/touched are scratch (touched holds
+// the score ids that were set, so only those are reset - no 243-wide fills).
 // hardConstraint: null or {fixed, minCounts} of the parent edge (hard mode).
-export const evalCandidate = ( flat, base, len, gi, matrix, est, cnt2, yel2, hardConstraint ) => {
+export const evalCandidate = ( flat, base, len, gi, matrix, est, cnt2, touched, hardConstraint ) => {
   if ( hardConstraint && !isHardModeValidOptimized( GUESSES[ gi ], hardConstraint ) ) {
     return { E: Infinity, Y: Infinity, joint: Infinity };
   }
-  cnt2.fill( 0 );
-  yel2.fill( 0 );
+  const row = gi * NT;
+  let nTouched = 0;
   for ( let i = 0; i < len; i++ ) {
-    const t = flat[ base + i ];
-    const s = matrix[ t * NG + gi ];
+    const s = matrix[ row + flat[ base + i ] ];
+    if ( cnt2[ s ] === 0 ) touched[ nTouched++ ] = s;
     cnt2[ s ]++;
-    yel2[ s ] += yellowsArray[ s ];
   }
   let E = 1, Y = 0;
-  for ( let s = 0; s < 243; s++ ) {
+  for ( let k = 0; k < nTouched; k++ ) {
+    const s = touched[ k ];
     const c = cnt2[ s ];
-    if ( !c ) continue;
+    cnt2[ s ] = 0;
     if ( s === 242 ) continue; // solved by this guess (242 = '22222' int)
-    Y += yel2[ s ] / len;
+    Y += yellowsArray[ s ] * c / len;
     if ( c === 1 ) {
       E += 1 / len; // leaf word: one more guess
     }

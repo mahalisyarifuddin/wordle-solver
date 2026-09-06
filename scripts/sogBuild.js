@@ -33,14 +33,14 @@ for ( let i = 0; i < 243; i++ ) {
 const rankCandidates = ( words, base, len, mode, constraint, topN ) => {
   const est = calib[ mode ];
   const cnt2 = new Int32Array( 243 );
-  const yel2 = new Int32Array( 243 );
+  const touched = new Int32Array( 243 );
   const considered = new Uint8Array( NG );
   const results = [];
   const consider = gi => {
     if ( considered[ gi ] ) return;
     considered[ gi ] = 1;
     if ( mode === 'hard' && constraint && !isHardModeValidOptimized( GUESSES[ gi ], constraint ) ) return;
-    const r = evalCandidate( words, base, len, gi, matrix, est, cnt2, yel2, null );
+    const r = evalCandidate( words, base, len, gi, matrix, est, cnt2, touched, null );
     if ( r.joint !== Infinity ) results.push( [ gi, r.E, r.Y, r.E + YELLOW_WEIGHT * r.Y ] );
   };
   // in-bucket words (always hard-valid, always optimal near leaves)
@@ -59,7 +59,7 @@ const rankCandidates = ( words, base, len, mode, constraint, topN ) => {
       cnt.fill( 0 );
       let y = 0;
       for ( let i = 0; i < len; i++ ) {
-        const s = matrix[ words[ base + i ] * NG + gi ];
+        const s = matrix[ gi * NT + words[ base + i ] ];
         cnt[ s ]++;
         y += YELLOWS_ARRAY[ s ];
       }
@@ -135,12 +135,12 @@ const buildGreedy = ( words0, base0, len0, mode, constraint0 ) => {
       fr.node = { guess: fr.guess, map: {} };
       const cnt = new Int32Array( 243 );
       const offs = new Int32Array( 244 );
-      for ( let i = 0; i < fr.len; i++ ) cnt[ matrix[ fr.words[ fr.base + i ] * NG + gi ] ]++;
+      for ( let i = 0; i < fr.len; i++ ) cnt[ matrix[ gi * NT + fr.words[ fr.base + i ] ] ]++;
       for ( let s = 0; s < 243; s++ ) offs[ s + 1 ] = offs[ s ] + cnt[ s ];
       const flat = new Int32Array( fr.len );
       cnt.fill( 0 );
       for ( let i = 0; i < fr.len; i++ ) {
-        const s = matrix[ fr.words[ fr.base + i ] * NG + gi ];
+        const s = matrix[ gi * NT + fr.words[ fr.base + i ] ];
         flat[ offs[ s ] + cnt[ s ]++ ] = fr.words[ fr.base + i ];
       }
       fr.partition = { flat, offs };
@@ -239,12 +239,12 @@ const improveNode = ( node, words, base, len, mode, constraint, alts, childBudge
   const gi = guessIndexMap.get( node.guess );
   const cnt = new Int32Array( 243 );
   const offs = new Int32Array( 244 );
-  for ( let i = 0; i < len; i++ ) cnt[ matrix[ words[ base + i ] * NG + gi ] ]++;
+  for ( let i = 0; i < len; i++ ) cnt[ matrix[ gi * NT + words[ base + i ] ] ]++;
   for ( let s = 0; s < 243; s++ ) offs[ s + 1 ] = offs[ s ] + cnt[ s ];
   const flat = new Int32Array( len );
   cnt.fill( 0 );
   for ( let i = 0; i < len; i++ ) {
-    const s = matrix[ words[ base + i ] * NG + gi ];
+    const s = matrix[ gi * NT + words[ base + i ] ];
     flat[ offs[ s ] + cnt[ s ]++ ] = words[ base + i ];
   }
   const children = [];
@@ -312,12 +312,12 @@ const buildRoot = ( starter, mode ) => {
   const gi = guessIndexMap.get( starter );
   const cnt = new Int32Array( 243 );
   const offs = new Int32Array( 244 );
-  for ( let i = 0; i < NT; i++ ) cnt[ matrix[ i * NG + gi ] ]++;
+  for ( let i = 0; i < NT; i++ ) cnt[ matrix[ gi * NT + i ] ]++;
   for ( let s = 0; s < 243; s++ ) offs[ s + 1 ] = offs[ s ] + cnt[ s ];
   const flat = new Int32Array( NT );
   cnt.fill( 0 );
   for ( let i = 0; i < NT; i++ ) {
-    const s = matrix[ i * NG + gi ];
+    const s = matrix[ gi * NT + i ];
     flat[ offs[ s ] + cnt[ s ]++ ] = i;
   }
   const map = {};
