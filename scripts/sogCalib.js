@@ -6,6 +6,7 @@ import targetWords from '../data/targetWords.js';
 import { getYellows } from '../server/wordleCore.js';
 
 const TARGETS = targetWords;
+const NT = TARGETS.length; // full dictionary size (targets == guesses after full-dictionary integration)
 
 const loadTree = name => {
   const s = fs.readFileSync( `data/${name}.js`, 'utf8' );
@@ -50,8 +51,8 @@ const buildTable = samples => {
   }
   const sizes = [ ...bySize.keys() ].sort( ( a, b ) => a - b );
   const mkTab = ( stat ) => {
-    const tabG = new Float64Array( 2316 );
-    const tabY = new Float64Array( 2316 );
+    const tabG = new Float64Array( NT + 1 );
+    const tabY = new Float64Array( NT + 1 );
     for ( const size of sizes ) {
       const arr = bySize.get( size ).slice().sort( ( a, b ) => a.avgG + a.avgY - ( b.avgG + b.avgY ) );
       const k = Math.max( 1, Math.round( arr.length * stat ) );
@@ -63,7 +64,7 @@ const buildTable = samples => {
     return { tabG, tabY };
   };
   const interp = ( tab, known ) => {
-    for ( let n = 2; n <= 2315; n++ ) {
+    for ( let n = 2; n <= NT; n++ ) {
       if ( known.includes( n ) ) continue;
       const lo = known.filter( k => k < n ).pop();
       const hi = known.find( k => k > n );
@@ -80,7 +81,7 @@ const buildTable = samples => {
     const m = tail.length;
     const slope = ( m * sxy - sx * sy ) / ( m * sxx - sx * sx );
     const intercept = ( sy - slope * sx ) / m;
-    for ( let n = ( tail[ tail.length - 1 ] + 1 ); n <= 2315; n++ ) {
+    for ( let n = ( tail[ tail.length - 1 ] + 1 ); n <= NT; n++ ) {
       tab[ n ] = Math.max( 0, slope * Math.log( n ) + intercept );
     }
   };
@@ -90,7 +91,7 @@ const buildTable = samples => {
   interp( mean.tabG, known ); interp( mean.tabY, known );
   interp( best25.tabG, known ); interp( best25.tabY, known );
   // enforce monotone non-decreasing tables (expected cost grows with bucket size)
-  const monotone = tab => { for ( let n = 3; n <= 2315; n++ ) if ( tab[ n ] < tab[ n - 1 ] ) tab[ n ] = tab[ n - 1 ]; };
+  const monotone = tab => { for ( let n = 3; n <= NT; n++ ) if ( tab[ n ] < tab[ n - 1 ] ) tab[ n ] = tab[ n - 1 ]; };
   monotone( mean.tabG ); monotone( mean.tabY );
   monotone( best25.tabG ); monotone( best25.tabY );
   return { mean, best25 };
@@ -133,7 +134,7 @@ const main = () => {
 
   console.log( 'samples normal:', normalSamples.length, ' hard:', hardSamples.length );
   console.log( 'size | estG(b25/norm) estY(b25/norm) | estG(b25/hard) estY(b25/hard)' );
-  for ( const n of [ 2, 3, 4, 5, 8, 12, 20, 40, 80, 150, 300, 600, 1200, 2315 ] ) {
+  for ( const n of [ 2, 3, 4, 5, 8, 12, 20, 40, 80, 150, 300, 600, 1200, 2315, NT ] ) {
     console.log( `${String( n ).padStart( 4 )} | ${normal.best25.tabG[ n ].toFixed( 3 )}   ${normal.best25.tabY[ n ].toFixed( 3 )}        | ${hard.best25.tabG[ n ].toFixed( 3 )}   ${hard.best25.tabY[ n ].toFixed( 3 )}` );
   }
 };

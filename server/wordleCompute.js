@@ -1,6 +1,7 @@
 import guessWords from './guessWords.js';
+import targetWords from './targetWords.js';
 import { IS_HARD_MODE, isHardModeValidOptimized, getHardModeConstraints, perfectScore, score, getYellows, fastToScoreString, fastDecodeYellows, yellowsArray } from './wordleCore.js';
-import partition from './partition.js';
+import partition, { getSharedScores, targetWordIndexMap, guessWordIndexMap } from './partition.js';
 
 class ComputationNode {
   constructor( words, guesses, possibleGuesses, skip = false, heuristic = new Heuristic() ) {
@@ -12,9 +13,31 @@ class ComputationNode {
     this.guessNodes = [];
     this.depth = Number.POSITIVE_INFINITY;
 
+    // Lazily-initialized fast-scan state: parallel Int32 target indices for
+    // this.words plus reusable bucket counters. getNextOption() fuses the
+    // partition + heuristic score into one typed-array pass over the shared
+    // score matrix (avoids building a JS object map per candidate).
+    this._widx = null;
+    this._wset = null;
+    this._cnt = new Int32Array( 243 );
+    this._touched = new Int32Array( 243 );
+
     if ( !skip ) {
       this.openNext( heuristic );
     }
+  }
+
+  fastPrep() {
+    if ( this._widx ) return;
+    const widx = new Int32Array( this.words.length );
+    let ok = true;
+    for ( let i = 0; i < this.words.length; i++ ) {
+      const idx = targetWordIndexMap.get( this.words[ i ] );
+      if ( idx === undefined ) { ok = false; break; }
+      widx[ i ] = idx;
+    }
+    this._widx = ok ? widx : null;
+    this._wset = new Set( this.words );
   }
 
   merge( computationNode ) {
@@ -125,17 +148,69 @@ class ComputationNode {
   }
 
   getNextOption( heuristic ) {
-    let bestOption = null;
+    this.fastPrep();
+    const matrix = getSharedScores();
+    const words = this.words;
+    const widx = this._widx;
+    const wlen = words.length;
+    if ( widx === null ) {
+      // words not all in targetWords: original object-map path
+      let bestOption = null;
+      for ( let i = 0; i < this.possibleGuesses.length; i++ ) {
+        const guess = this.possibleGuesses[ i ];
+        if ( this.guessSet.has( guess ) || this.guesses.includes( guess ) ) continue;
+        const map = partition( words, guess );
+        const s = Heuristic.score( words, guess, map, heuristic, true );
+        if ( !bestOption || s < bestOption.size ) bestOption = new GuessOption( guess, map, s );
+      }
+      return bestOption;
+    }
+    const cnt = this._cnt;
+    const touched = this._touched;
+    let bestGuess = null;
+    let bestSize = Infinity;
     for ( let i = 0; i < this.possibleGuesses.length; i++ ) {
       const guess = this.possibleGuesses[ i ];
       if ( this.guessSet.has( guess ) || this.guesses.includes( guess ) ) continue;
-      const map = partition( this.words, guess );
-      const s = Heuristic.score( this.words, guess, map, heuristic, true );
-      if ( !bestOption || s < bestOption.size ) {
-        bestOption = new GuessOption( guess, map, s );
+      let size;
+      const gi = guessWordIndexMap.get( guess );
+      if ( gi === undefined || !matrix ) {
+        // unknown guess (or no shared matrix): original object-map path
+        const map = partition( words, guess );
+        size = Heuristic.score( words, guess, map, heuristic, true );
+      } else {
+        const row = gi * targetWords.length;
+        let nTouched = 0;
+        for ( let k = 0; k < wlen; k++ ) {
+          const s = matrix[ row + widx[ k ] ];
+          if ( cnt[ s ] === 0 ) touched[ nTouched++ ] = s;
+          cnt[ s ]++;
+        }
+        let count = 0, best = 0, totalY = 0;
+        for ( let k = 0; k < nTouched; k++ ) {
+          const s = touched[ k ];
+          const c = cnt[ s ];
+          cnt[ s ] = 0;
+          count++;
+          if ( c > best ) best = c;
+          totalY += yellowsArray[ s ] * c;
+        }
+        if ( count === 1 && wlen > 1 ) size = 1e6;
+        else {
+          const isTarget = this._wset.has( guess );
+          size = heuristic.averageWeight * ( wlen - ( isTarget ? 1 : 0 ) ) / count +
+            heuristic.bestWeight * best +
+            heuristic.yellowWeight * totalY / wlen;
+          if ( isTarget ) size -= 10;
+        }
+      }
+      if ( size < bestSize ) {
+        bestSize = size;
+        bestGuess = guess;
       }
     }
-    return bestOption;
+    if ( bestGuess === null ) return null;
+    return new GuessOption( bestGuess, partition( words, bestGuess ), bestSize );
   }
 
   openSpecificGuess( guess, heuristic, skipChildSearch = false ) {

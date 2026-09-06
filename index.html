@@ -29,11 +29,57 @@
     #main {
       touch-action: manipulation !important;
     }
+    /* "Is this a valid guess?" checker */
+    #guessCheck {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 10;
+      background: #fff;
+      border: 1px solid #787C7E;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
+      font-size: 13px;
+      max-width: 240px;
+      box-shadow: 0 1px 4px rgba( 0, 0, 0, 0.12 );
+    }
+    #guessCheck input {
+      width: 92px;
+      padding: 4px 6px;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-right: 6px;
+    }
+    #guessCheck button {
+      padding: 4px 8px;
+      font-size: 13px;
+      cursor: pointer;
+      border: 1px solid #787C7E;
+      border-radius: 4px;
+      background: #f5f5f5;
+    }
+    #guessCheckOut {
+      margin-top: 5px;
+      line-height: 1.35;
+    }
+    #guessCheckOut.ok { color: #6AAA64; }
+    #guessCheckOut.err { color: #B00020; }
   </style>
 </head>
 <body>
 
   <div id="main" style="position: absolute; left: 0; top: 0;">
+  </div>
+
+  <div id="guessCheck">
+    <label for="guessCheckInput">Check a word:</label>
+    <input id="guessCheckInput" maxlength="5" placeholder="BEIGE" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false"/>
+    <button id="guessCheckButton" type="button">Check</button>
+    <div id="guessCheckOut"></div>
   </div>
 
   <script type="module">
@@ -63,10 +109,13 @@
     import greensSoilyTree from './data/soily.tree.greens.js';
     import greensSeineTree from './data/seine.tree.greens.js';
     import greensSaiceTree from './data/saice.tree.greens.js';
+    import greensSuintTree from './data/suint.tree.greens.js';
     import greensHardSeineTree from './data/seine.tree.hard.greens.js';
     import greensHardSliceTree from './data/slice.tree.hard.greens.js';
     import greensHardShinyTree from './data/shiny.tree.hard.greens.js';
+    import greensHardSuintTree from './data/suint.tree.hard.greens.js';
     import targetWords from './data/targetWords.js';
+    import wordCheck from './data/wordCheck.js';
 
     const fontFamily = "'Clear Sans', 'Helvetica Neue', Arial, sans-serif";
     const black = new scenery.Color( '#1A1A1B' );
@@ -367,7 +416,7 @@
       }
     } );
 
-    const helpText = new scenery.RichText( 'Click one of the starting guesses, I\'ll give you the rest!<br><br>Click the letters to change the color to match your result, then you\'ll be given another guess (or click a thumbnail option below).<br><br>Optimized to minimize the number of total guesses. Best is ~3.42 per win. <a href="{{about}}">Learn More</a>.', {
+    const helpText = new scenery.RichText( 'Click one of the starting guesses, I\'ll give you the rest!<br><br>Click the letters to change the color to match your result, then you\'ll be given another guess (or click a thumbnail option below).<br><br>Optimized to minimize the number of total guesses over the full 14,855-word dictionary. Best is ~4.14 per win. <a href="{{about}}">Learn More</a>.', {
       lineWrap: 330,
       font: new scenery.Font( { size: 14, family: fontFamily } ),
       layoutOptions: { topMargin: 15 },
@@ -446,9 +495,11 @@
                 createTreeButton( greensSoilyTree, 'SOILY' ),
                 createTreeButton( greensSeineTree, 'SEINE' ),
                 createTreeButton( greensSaiceTree, 'SAICE' ),
+                createTreeButton( greensSuintTree, 'SUINT' ),
                 createTreeButton( greensHardSeineTree, 'SEINE (Hard)' ),
                 createTreeButton( greensHardSliceTree, 'SLICE (Hard)' ),
-                createTreeButton( greensHardShinyTree, 'SHINY (Hard)' )
+                createTreeButton( greensHardShinyTree, 'SHINY (Hard)' ),
+                createTreeButton( greensHardSuintTree, 'SUINT (Hard)' )
               ]
             } ),
           ]
@@ -477,6 +528,37 @@
         display.setWidthHeight( window.innerWidth, Math.ceil( mainBox.bounds.height + 10 ) );
       }
     } );
+
+    // ---- "Is this a valid guess?" checker ----
+    const checkInput = document.getElementById( 'guessCheckInput' );
+    const checkOutput = document.getElementById( 'guessCheckOut' );
+    const runCheck = () => {
+      const word = ( checkInput.value || '' ).toLowerCase().replace( /[^a-z]/g, '' );
+      if ( word.length !== 5 ) {
+        checkOutput.textContent = 'Type exactly 5 letters (a\u2013z).';
+        checkOutput.className = 'err';
+        return;
+      }
+      const result = wordCheck.find( word );
+      if ( result === 0 ) {
+        checkOutput.textContent = `${word.toUpperCase()} is NOT a valid guess.`;
+        checkOutput.className = 'err';
+      }
+      else if ( result === 1 ) {
+        checkOutput.textContent = `${word.toUpperCase()} is a valid guess \u2014 not among the ${wordCheck.tCount.toLocaleString()} possible answers.`;
+        checkOutput.className = 'ok';
+      }
+      else {
+        checkOutput.textContent = `${word.toUpperCase()} is a valid guess and can be the hidden answer.`;
+        checkOutput.className = 'ok';
+      }
+    };
+    document.getElementById( 'guessCheckButton' ).addEventListener( 'click', runCheck );
+    checkInput.addEventListener( 'keydown', event => {
+      if ( event.key === 'Enter' ) runCheck();
+    } );
+    checkInput.value = 'beige';
+    runCheck();
 
   </script>
 </body>
