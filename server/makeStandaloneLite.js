@@ -19,37 +19,37 @@ const wordCheckJs = fs.readFileSync( 'data/wordCheck.js', 'utf8' )
 const GROUPS = [
   { title: 'Fastest Average', items: [
     [ 'salet.tree.total', 'T_TOTAL_SALET', 'SALET' ],
-    [ 'reast.tree.total', 'T_TOTAL_REAST', 'REAST' ],
-    [ 'crate.tree.total', 'T_TOTAL_CRATE', 'CRATE' ],
-    [ 'trace.tree.total', 'T_TOTAL_TRACE', 'TRACE' ],
+    [ 'palet.tree.total', 'T_TOTAL_PALET', 'PALET' ],
+    [ 'rants.tree.total', 'T_TOTAL_RANTS', 'RANTS' ],
+    [ 'manet.tree.total', 'T_TOTAL_MANET', 'MANET' ],
     [ 'slate.tree.total', 'T_TOTAL_SLATE', 'SLATE' ],
-    [ 'crane.tree.total', 'T_TOTAL_CRANE', 'CRANE' ]
+    [ 'morne.tree.total', 'T_TOTAL_MORNE', 'MORNE' ]
   ] },
-  { title: 'Fewest 5+', items: [
-    [ 'rance.tree', 'T_MIN_RANCE', 'RANCE' ],
-    [ 'rants.tree', 'T_MIN_RANTS', 'RANTS' ],
+  { title: 'Fewest', items: [
     [ 'rated.tree', 'T_MIN_RATED', 'RATED' ],
-    [ 'ronte.tree', 'T_MIN_RONTE', 'RONTE' ],
-    [ 'alter.tree', 'T_MIN_ALTER', 'ALTER' ],
-    [ 'lance.tree', 'T_MIN_LANCE', 'LANCE' ]
+    [ 'ranid.tree', 'T_MIN_RANID', 'RANID' ],
+    [ 'rants.tree', 'T_MIN_RANTS', 'RANTS' ],
+    [ 'saner.tree', 'T_MIN_SANER', 'SANER' ],
+    [ 'manet.tree', 'T_MIN_MANET', 'MANET' ],
+    [ 'lanes.tree', 'T_MIN_LANES', 'LANES' ]
   ] },
   { title: 'Hard Mode', items: [
-    [ 'salet.tree.hard', 'T_HARD_SALET', 'SALET' ],
-    [ 'slate.tree.hard', 'T_HARD_SLATE', 'SLATE' ],
-    [ 'least.tree.hard', 'T_HARD_LEAST', 'LEAST' ],
-    [ 'trace.tree.hard', 'T_HARD_TRACE', 'TRACE' ],
+    [ 'palet.tree.hard', 'T_HARD_PALET', 'PALET' ],
+    [ 'peart.tree.hard', 'T_HARD_PEART', 'PEART' ],
+    [ 'trape.tree.hard', 'T_HARD_TRAPE', 'TRAPE' ],
     [ 'leant.tree.hard', 'T_HARD_LEANT', 'LEANT' ],
-    [ 'cramp.tree.hard', 'T_HARD_CRAMP', 'CRAMP' ]
+    [ 'trine.tree.hard', 'T_HARD_TRINE', 'TRINE' ],
+    [ 'prate.tree.hard', 'T_HARD_PRATE', 'PRATE' ]
   ] },
   { title: 'Sea of Greens', items: [
-    [ 'soily.tree.greens', 'T_GREENS_SOILY', 'SOILY' ],
-    [ 'seine.tree.greens', 'T_GREENS_SEINE', 'SEINE' ],
-    [ 'saice.tree.greens', 'T_GREENS_SAICE', 'SAICE' ],
+    [ 'soree.tree.greens', 'T_GREENS_SOREE', 'SOREE' ],
     [ 'suint.tree.greens', 'T_GREENS_SUINT', 'SUINT' ],
-    [ 'seine.tree.hard.greens', 'T_GREENS_SEINE_HARD', 'SEINE (HARD)' ],
-    [ 'slice.tree.hard.greens', 'T_GREENS_SLICE_HARD', 'SLICE (HARD)' ],
-    [ 'shiny.tree.hard.greens', 'T_GREENS_SHINY_HARD', 'SHINY (HARD)' ],
-    [ 'suint.tree.hard.greens', 'T_GREENS_SUINT_HARD', 'SUINT (HARD)' ]
+    [ 'seine.tree.greens', 'T_GREENS_SEINE', 'SEINE' ]
+  ] },
+  { title: 'Sea of Greens Hard', items: [
+    [ 'suint.tree.hard.greens', 'T_GREENS_SUINT_HARD', 'SUINT (HARD)' ],
+    [ 'saint.tree.hard.greens', 'T_GREENS_SAINT_HARD', 'SAINT (HARD)' ],
+    [ 'sleet.tree.hard.greens', 'T_GREENS_SLEET_HARD', 'SLEET (HARD)' ]
   ] }
 ];
 
@@ -79,8 +79,8 @@ const championBest = files => {
   }
   return best;
 };
-const championNormal = championBest( [ 'soily.tree.greens', 'seine.tree.greens', 'saice.tree.greens', 'suint.tree.greens' ] );
-const championHard = championBest( [ 'seine.tree.hard.greens', 'slice.tree.hard.greens', 'shiny.tree.hard.greens', 'suint.tree.hard.greens' ] );
+const championNormal = championBest( [ 'soree.tree.greens', 'suint.tree.greens', 'seine.tree.greens' ] );
+const championHard = championBest( [ 'suint.tree.hard.greens', 'saint.tree.hard.greens', 'sleet.tree.hard.greens' ] );
 const championLabel = file => ( GROUPS.find( g => g.title === 'Sea of Greens' ).items.find( i => i[ 0 ] === file ) || [] )[ 2 ] || file;
 const championNormalLabel = championLabel( championNormal.file );
 const championHardLabel = championLabel( championHard.file );
