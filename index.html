@@ -109,9 +109,11 @@
     import greensSoilyTree from './data/soily.tree.greens.js';
     import greensSeineTree from './data/seine.tree.greens.js';
     import greensSaiceTree from './data/saice.tree.greens.js';
+    import greensSuintTree from './data/suint.tree.greens.js';
     import greensHardSeineTree from './data/seine.tree.hard.greens.js';
     import greensHardSliceTree from './data/slice.tree.hard.greens.js';
     import greensHardShinyTree from './data/shiny.tree.hard.greens.js';
+    import greensHardSuintTree from './data/suint.tree.hard.greens.js';
     import targetWords from './data/targetWords.js';
     import wordCheck from './data/wordCheck.js';
 
@@ -414,7 +416,7 @@
       }
     } );
 
-    const helpText = new scenery.RichText( 'Click one of the starting guesses, I\'ll give you the rest!<br><br>Click the letters to change the color to match your result, then you\'ll be given another guess (or click a thumbnail option below).<br><br>Optimized to minimize the number of total guesses. Best is ~3.42 per win. <a href="{{about}}">Learn More</a>.', {
+    const helpText = new scenery.RichText( 'Click one of the starting guesses, I\'ll give you the rest!<br><br>Click the letters to change the color to match your result, then you\'ll be given another guess (or click a thumbnail option below).<br><br>Optimized to minimize the number of total guesses over the full 14,855-word dictionary. Best is ~4.14 per win. <a href="{{about}}">Learn More</a>.', {
       lineWrap: 330,
       font: new scenery.Font( { size: 14, family: fontFamily } ),
       layoutOptions: { topMargin: 15 },
@@ -493,9 +495,11 @@
                 createTreeButton( greensSoilyTree, 'SOILY' ),
                 createTreeButton( greensSeineTree, 'SEINE' ),
                 createTreeButton( greensSaiceTree, 'SAICE' ),
+                createTreeButton( greensSuintTree, 'SUINT' ),
                 createTreeButton( greensHardSeineTree, 'SEINE (Hard)' ),
                 createTreeButton( greensHardSliceTree, 'SLICE (Hard)' ),
-                createTreeButton( greensHardShinyTree, 'SHINY (Hard)' )
+                createTreeButton( greensHardShinyTree, 'SHINY (Hard)' ),
+                createTreeButton( greensHardSuintTree, 'SUINT (Hard)' )
               ]
             } ),
           ]

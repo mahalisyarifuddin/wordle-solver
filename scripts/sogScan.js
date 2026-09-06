@@ -50,7 +50,7 @@ const printTop = ( label, results, n ) => {
 };
 
 // ---- main ----
-console.log( 'Building score matrix (2315 x 14855)...' );
+console.log( `Building score matrix (${ (await import('./sogCommon.js')).NT } x 14855)...` );
 matrixBuffer = buildMatrix();
 matrix = new Uint8Array( matrixBuffer );
 console.log( 'Building static candidate order...' );

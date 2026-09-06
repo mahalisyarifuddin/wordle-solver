@@ -45,9 +45,11 @@ const GROUPS = [
     [ 'soily.tree.greens', 'T_GREENS_SOILY', 'SOILY' ],
     [ 'seine.tree.greens', 'T_GREENS_SEINE', 'SEINE' ],
     [ 'saice.tree.greens', 'T_GREENS_SAICE', 'SAICE' ],
+    [ 'suint.tree.greens', 'T_GREENS_SUINT', 'SUINT' ],
     [ 'seine.tree.hard.greens', 'T_GREENS_SEINE_HARD', 'SEINE (HARD)' ],
     [ 'slice.tree.hard.greens', 'T_GREENS_SLICE_HARD', 'SLICE (HARD)' ],
-    [ 'shiny.tree.hard.greens', 'T_GREENS_SHINY_HARD', 'SHINY (HARD)' ]
+    [ 'shiny.tree.hard.greens', 'T_GREENS_SHINY_HARD', 'SHINY (HARD)' ],
+    [ 'suint.tree.hard.greens', 'T_GREENS_SUINT_HARD', 'SUINT (HARD)' ]
   ] }
 ];
 
@@ -69,8 +71,19 @@ const championOneToOne = file => {
   }
   return guessSum / total + tree.ranking.yellows / total;
 };
-const championSoily = championOneToOne( 'soily.tree.greens' );
-const championSeineHard = championOneToOne( 'seine.tree.hard.greens' );
+const championBest = files => {
+  let best = { file: files[ 0 ], value: Infinity };
+  for ( const f of files ) {
+    const v = championOneToOne( f );
+    if ( v < best.value ) best = { file: f, value: v };
+  }
+  return best;
+};
+const championNormal = championBest( [ 'soily.tree.greens', 'seine.tree.greens', 'saice.tree.greens', 'suint.tree.greens' ] );
+const championHard = championBest( [ 'seine.tree.hard.greens', 'slice.tree.hard.greens', 'shiny.tree.hard.greens', 'suint.tree.hard.greens' ] );
+const championLabel = file => ( GROUPS.find( g => g.title === 'Sea of Greens' ).items.find( i => i[ 0 ] === file ) || [] )[ 2 ] || file;
+const championNormalLabel = championLabel( championNormal.file );
+const championHardLabel = championLabel( championHard.file );
 
 const groupsJson = JSON.stringify( GROUPS.map( g => ( {
   title: g.title,
@@ -126,7 +139,7 @@ const html = `<!DOCTYPE html>
   <h1>WORDLE<span style="color:#6AAA64">Solver</span></h1>
   <p class="help">Click one of the starting guesses, I'll give you the rest!<br>
   Click the letters to change the color to match your Wordle result, then you'll be given another guess (or click a thumbnail option below).<br>
-  Sea of Greens (1:1 guesses:yellows) champions: <b>SOILY</b> ${championSoily.toFixed( 4 )} · <b>SEINE (hard)</b> ${championSeineHard.toFixed( 4 )}.</p>
+  Sea of Greens (1:1 guesses:yellows) champions: <b>${championNormalLabel}</b> ${championNormal.value.toFixed( 4 )} · <b>${championHardLabel}</b> ${championHard.value.toFixed( 4 )}.</p>
   <div class="check">
     <label for="gcInput">Check a word:</label>
     <input id="gcInput" maxlength="5" placeholder="BEIGE" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false"/>

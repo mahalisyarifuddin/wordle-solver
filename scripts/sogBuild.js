@@ -43,14 +43,19 @@ const rankCandidates = ( words, base, len, mode, constraint, topN ) => {
     const r = evalCandidate( words, base, len, gi, matrix, est, cnt2, touched, null );
     if ( r.joint !== Infinity ) results.push( [ gi, r.E, r.Y, r.E + YELLOW_WEIGHT * r.Y ] );
   };
-  // in-bucket words (always hard-valid, always optimal near leaves)
+  // in-bucket words (always hard-valid, always optimal near leaves). For the
+  // last two words an in-bucket guess is the unique exact endgame; the
+  // calibrated est tables badly misrank such splits (e.g. for the anagram
+  // pair {aurei, uraei} a non-splitting guess scores better than the perfect
+  // in-bucket guess), so rank tiny buckets by in-bucket words only.
+  const ibOnly = len <= 2;
   for ( let i = 0; i < len; i++ ) consider( t2g[ words[ base + i ] ] );
   // top static
   const topStatic = Math.min( 2000, NG );
-  for ( let k = 0; k < topStatic; k++ ) consider( staticOrder[ k ] );
+  for ( let k = 0; k < topStatic && !ibOnly; k++ ) consider( staticOrder[ k ] );
   // one-ply top candidates (partition quality on THIS node's words).
   // In hard mode, filter by validity BEFORE ranking so the best valid guesses survive.
-  if ( len >= 12 ) {
+  if ( len >= 12 && !ibOnly ) {
     const cnt = new Int32Array( 243 );
     const onePly = [];
     for ( let gi = 0; gi < NG; gi++ ) {
@@ -119,7 +124,8 @@ const buildGreedy = ( words0, base0, len0, mode, constraint0 ) => {
   while ( stack.length ) {
     if ( ++guard > 500000 ) {
       const info = stack.slice( -8 ).map( f => `{started:${f.started} len:${f.len} pend:${f.pending ? f.pending.length : '?'} node:${f.node ? ( f.node.guess || '?' ) : '?'}}` ).join( ' <- ' );
-      throw new Error( 'buildGreedy guard hit; stack=' + stack.length + ' top8: ' + info );
+      const dump = ( f, i ) => `#${i} len=${f.len} started=${f.started} pend=${f.pending ? f.pending.length : '?'} guess=${f.node ? f.node.guess : '?'} words=${f.words ? [ ...Array( Math.min( 4, f.len ) ).keys() ].map( k => TARGETS[ f.words[ f.base + k ] ] ).join( ',' ) : '?'}`;
+      throw new Error( 'buildGreedy guard hit; stack=' + stack.length + ' top8: ' + info + ' | FIRST: ' + dump( stack[ 0 ], 0 ) + ' | MID: ' + dump( stack[ Math.floor( stack.length / 2 ) ], Math.floor( stack.length / 2 ) ) + ' | LAST: ' + dump( stack[ stack.length - 1 ], stack.length - 1 ) );
     }
     const fr = stack[ stack.length - 1 ];
     if ( !fr.started ) {
@@ -144,6 +150,48 @@ const buildGreedy = ( words0, base0, len0, mode, constraint0 ) => {
         flat[ offs[ s ] + cnt[ s ]++ ] = fr.words[ fr.base + i ];
       }
       fr.partition = { flat, offs };
+      // Safety net: if the chosen guess failed to split (est tables can rank a
+      // non-splitting guess first), force the best in-bucket word, which always
+      // reduces the bucket. In-bucket guesses are hard-valid by construction.
+      {
+        let noProgress = false;
+        for ( let s = 0; s < 243; s++ ) {
+          if ( offs[ s + 1 ] - offs[ s ] === fr.len ) { noProgress = true; break; }
+        }
+        if ( noProgress ) {
+          let bestGi = -1, bestMax = Infinity, bestY = Infinity;
+          const bc = new Int32Array( 243 );
+          const rec = new Int32Array( 244 );
+          for ( let i = 0; i < fr.len; i++ ) {
+            const gi2 = t2g[ fr.words[ fr.base + i ] ];
+            bc.fill( 0 );
+            let y = 0;
+            for ( let k = 0; k < fr.len; k++ ) {
+              const s2 = matrix[ gi2 * NT + fr.words[ fr.base + k ] ];
+              bc[ s2 ]++;
+              if ( s2 !== 242 ) y += YELLOWS_ARRAY[ s2 ];
+            }
+            let max = 0, nb = 0;
+            for ( let s2 = 0; s2 < 243; s2++ ) if ( bc[ s2 ] ) { nb++; if ( bc[ s2 ] > max ) max = bc[ s2 ]; }
+            // prefer a real split (max < len), then fewer yellows, then more buckets
+            if ( max < bestMax || ( max === bestMax && ( y < bestY || ( y === bestY && nb > 1 ) ) ) ) {
+              bestMax = max; bestY = y; bestGi = gi2;
+            }
+          }
+          if ( bestGi === -1 ) throw new Error( `buildGreedy: no splitter for len=${fr.len}` );
+          fr.guess = GUESSES[ bestGi ];
+          fr.node = { guess: fr.guess, map: {} };
+          cnt.fill( 0 );
+          for ( let i = 0; i < fr.len; i++ ) cnt[ matrix[ bestGi * NT + fr.words[ fr.base + i ] ] ]++;
+          for ( let s = 0; s < 243; s++ ) rec[ s + 1 ] = rec[ s ] + cnt[ s ];
+          cnt.fill( 0 );
+          for ( let i = 0; i < fr.len; i++ ) {
+            const s = matrix[ bestGi * NT + fr.words[ fr.base + i ] ];
+            flat[ rec[ s ] + cnt[ s ]++ ] = fr.words[ fr.base + i ];
+          }
+          fr.partition = { flat, offs: rec };
+        }
+      }
       for ( let s = 0; s < 243; s++ ) {
         const n = offs[ s + 1 ] - offs[ s ];
         if ( !n ) continue;

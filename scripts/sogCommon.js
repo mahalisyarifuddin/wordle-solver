@@ -12,7 +12,7 @@ import targetWords from '../data/targetWords.js';
 import guessWords from '../server/guessWords.js';
 import { fastScore, yellowsArray, isHardModeValidOptimized, getHardModeConstraints } from '../server/wordleCore.js';
 
-export const NT = targetWords.length;           // 2315 answers
+export const NT = targetWords.length;           // full dictionary (14,855) after full-dictionary integration
 export const NG = guessWords.length;            // 14855 = full tabatkins/wordle-list dictionary
 export const TARGETS = targetWords;
 export const GUESSES = guessWords;
