@@ -48,7 +48,7 @@ const GROUPS = [
   ] },
   { title: 'Sea of Greens Hard', items: [
     [ 'suint.tree.hard.greens', 'T_GREENS_SUINT_HARD', 'SUINT (HARD)' ],
-    [ 'saint.tree.hard.greens', 'T_GREENS_SAINT_HARD', 'SAINT (HARD)' ],
+    [ 'shiny.tree.hard.greens', 'T_GREENS_SHINY_HARD', 'SHINY (HARD)' ],
     [ 'sleet.tree.hard.greens', 'T_GREENS_SLEET_HARD', 'SLEET (HARD)' ]
   ] }
 ];
@@ -80,8 +80,8 @@ const championBest = files => {
   return best;
 };
 const championNormal = championBest( [ 'soree.tree.greens', 'suint.tree.greens', 'seine.tree.greens' ] );
-const championHard = championBest( [ 'suint.tree.hard.greens', 'saint.tree.hard.greens', 'sleet.tree.hard.greens' ] );
-const championLabel = file => ( GROUPS.find( g => g.title === 'Sea of Greens' ).items.find( i => i[ 0 ] === file ) || [] )[ 2 ] || file;
+const championHard = championBest( [ 'suint.tree.hard.greens', 'shiny.tree.hard.greens', 'sleet.tree.hard.greens' ] );
+const championLabel = file => ( GROUPS.flatMap( g => g.items ).find( i => i[ 0 ] === file ) || [] )[ 2 ] || file;
 const championNormalLabel = championLabel( championNormal.file );
 const championHardLabel = championLabel( championHard.file );
 

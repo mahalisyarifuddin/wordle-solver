@@ -17,7 +17,7 @@ All exact trees were evaluated with `scripts/sogEval.js` (structural walk: verif
 | **Fewest** | `minimizeLongestMetric` | lexicographically minimize worst-case: shortest `counts.length` (max depth), then fewest at depth `max`, then `max-1`, … | normal |
 | **Hard** | `totalGuessesMetric` with `IS_HARD_MODE=true` | same as fastest but every follow-up guess must contain all revealed greens in place and at least as many of each yellow letter | hard |
 | **SOG** | `minimizeYellowsMetric` = `totalGuesses + yellows` (yellow = `getYellows(score)` per edge, summed over all paths) | minimize `avgGuesses + avgYellows` (1:1) — “Sea of Greens”: few greens *and* few yellows | normal |
-| **SOG hard** | same, `IS_HARD_MODE=true`; builder uses `YELLOW_WEIGHT=0.7` (tuned on `seine` benchmark; `1.0` reported for comparison) | same, hard | hard |
+| **SOG hard** | same, `IS_HARD_MODE=true`; builder uses `YELLOW_WEIGHT=1.0` — 1:1 guesses:yellows, identical to normal SoG | same, hard | hard |
 
 `counts[i]` = number of target words solved in `i+1` guesses (`counts[0]` = won on starter itself, i.e. `22222`). `depth` = longest path (same as `counts.length`). All trees are **exact** — no sampling.
 
@@ -138,15 +138,20 @@ Full 10 ranking: `SOREE 6.5996, SUINT 6.6543, SEINE 6.6607, SAINT 6.6672, SOILY 
 
 ### 5) Sea of Greens — Hard, 1:1 (3)
 
-Hard SOG uses builder `YELLOW_WEIGHT=0.7` (reported both weights). Sorted by `oneToOne_0.7 = avgG + 0.7·avgY` (builder objective); `1.0` shown for comparability.
+Hard SOG is now built with `YELLOW_WEIGHT=1.0` — **the exact same 1:1 guesses:yellows objective as normal SoG** (the previous 0.7 tune was dropped). Sorted by `1:1 = avgG + avgY` (builder objective). All six exact trees rebuilt and re-validated (`leaves == 14855`, `rankOk`, `scoreEdgesOk`).
 
-| # | Starter | AvgG | AvgY | 1:1 (0.7) | 1:1 (1.0) | Max | `counts` |
-|---|---------|------|------|-----------|-----------|-----|----------|
-| 1 | **SUINT** (hard) | 4.6802 | 2.2854 | **6.2800** | **6.9656** | 14 | `[1,174,2160,5578,4003,1600,664,315,171,97,48,22,13,6,2,1]` |
-| 2 | **SAINT** (hard) | 4.6657 | 2.3420 | 6.3051 | 7.0077 | 14 | `[1,190,2291,5462,3926,1639,682,323,171,90,42,20,11,5,1,1]` |
-| 3 | **SLEET** (hard) | 4.7303 | 2.2594 | 6.3119 | 6.9897 | 16 | `[1,154,1930,5433,4241,1762,674,319,175,87,40,21,10,3,2,1,1,1]` |
+| # | Starter | AvgG | AvgY | 1:1 | Max | `counts` |
+|---|---------|------|------|-----|-----|----------|
+| 1 | **SUINT** (hard) | 4.7252 | 2.1517 | **6.8769** | 15 | `[1,174,2080,5302,4173,1740,704,328,168,93,47,22,13,6,2,1,1]` |
+| 2 | **SHINY** (hard) | 4.7832 | 2.1339 | 6.9171 | 13 | `[1,141,1807,5130,4408,1961,770,343,158,74,35,15,7,3,2]` |
+| 3 | **SLEET** (hard) | 4.7770 | 2.1608 | 6.9377 | 16 | `[1,153,1859,5157,4426,1861,722,325,174,94,42,21,11,4,2,1,1,1]` |
+| 4 | **SEINE** (hard) | 4.8701 | 2.0699 | 6.9401 | 15 | `[1,151,1816,4879,4331,1999,849,402,209,109,56,26,14,8,3,1,1]` |
+| 5 | **SAINT** (hard) | 4.7015 | 2.2806 | 6.9821 | 15 | `[1,190,2208,5317,4063,1685,696,334,178,95,45,22,12,6,1,1,1]` |
+| 6 | **SLICE** (hard) | 4.7228 | 2.2962 | 7.0190 | 16 | `[1,171,2080,5335,4079,1805,710,345,171,79,34,26,12,3,1,1,1,1]` |
 
-Shipped SOG hard were `SEINE 6.3314/0.7 (6.9833/1.0), SLICE 6.3762 (7.1020), SHINY 6.? (6.9862/1.0), SUINT 6.2800 (6.9656)` — `SUINT` stays #1. `SAINT`/`SLEET` (not in shipped hard 4) displace `SEINE` (`6.3314`) and `SOILY` (`6.3177`) for #2/#3 under `0.7` weight; under `1.0` weight the order is `SUINT 6.9656, SLEET 6.9897, SHINY 6.9862` (≈ `SAINT` 7.0077 4th). `SLIMY`/`SLICE`/`SAICE` remain 7–10th. Saved in `computed/sog_hard_batch.json`.
+Under the strict 1:1 objective the shipped trio is now **`SUINT` (6.8769), `SHINY` (6.9171), `SLEET` (6.9377)** — `SAINT` (6.9821) drops out of the top 3. `SUINT` also keeps the lowest average guesses (4.7252) in the top 3, while `SHINY` has the best average yellows of the six (2.1339) and the shortest worst case (depth 13).
+
+**Builder fix found by this rebuild:** the `YELLOW_WEIGHT=1.0` run exposed a latent bug in `scripts/sogBuild.js`. When the greedy ranking picked a guess that failed to split a bucket at `len ≥ 3`, the "no-progress" safety net swapped in an in-bucket splitter and recomputed its partition into a fresh offsets array (`rec`), but the child-creation loop still read the **stale original offsets** (`offs`), so the node descended into the exact same bucket forever (e.g. hard-mode `SHINY` at `{bruin,rubin,burin}` → 500k-deep loop). The safety net now reuses the recomputed offsets (`offs.set(rec)`), fixing the loop. This path was unreachable at the old 0.7 tune because the ranking picked a splitting guess at those nodes.
 
 ---
 
@@ -183,7 +188,7 @@ Artifacts in this branch (not all committed, `computed/` is gitignored): `comput
 **Fewest (normal, minimize longest):** `RATED [102,2]`, `RANID [110,2]`, `RANTS [89,3]`, `SANER [109,3]`, `MANET [98,4]`, `LANES [103,4]` (all max 8)  
 **Hard (avg):** `PALET 4.5212`, `PEART 4.5231`, `TRAPE 4.5279`, `LEANT 4.5286`, `TRINE 4.5307`, `PRATE 4.5317`  
 **SOG normal (1:1):** `SOREE 6.5996`, `SUINT 6.6543`, `SEINE 6.6607`  
-**SOG hard (0.7 weight / 1.0):** `SUINT 6.2800/6.9656`, `SAINT 6.3051/7.0077`, `SLEET 6.3119/6.9897` (shipped hard `SHINY` 6.9862 is #4 under 1.0)
+**SOG hard (1:1, rebuilt at `YELLOW_WEIGHT=1.0`):** `SUINT 6.8769`, `SHINY 6.9171`, `SLEET 6.9377` — shipped trio (previously `SUINT`/`SAINT`/`SLEET` built at 0.7)
 
 All numbers are **exact** for the 14,855-word full dictionary; `SALET` remains the fastest-average champion, but `PALET` is essentially tied and `PALET` dominates hard mode, while `SOREE`/`SUINT` dominate Sea of Greens.
 

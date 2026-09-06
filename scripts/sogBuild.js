@@ -189,7 +189,11 @@ const buildGreedy = ( words0, base0, len0, mode, constraint0 ) => {
             const s = matrix[ bestGi * NT + fr.words[ fr.base + i ] ];
             flat[ rec[ s ] + cnt[ s ]++ ] = fr.words[ fr.base + i ];
           }
-          fr.partition = { flat, offs: rec };
+          // Point the child-creation bookkeeping at the recomputed offsets.
+          // (offs still held the original non-splitting partition; using it
+          // below would descend into the same bucket forever.)
+          offs.set( rec );
+          fr.partition = { flat, offs };
         }
       }
       for ( let s = 0; s < 243; s++ ) {
@@ -402,8 +406,9 @@ const buildRoot = ( starter, mode ) => {
 };
 
 const buildTree = ( starter, mode ) => {
-  // per-mode yellow weight (tuned on the seine benchmark): normal 1.0, hard 0.7
-  if ( mode === 'hard' && YELLOW_WEIGHT === 1 ) YELLOW_WEIGHT = 0.7;
+  // Sea of Greens objective is 1:1 (guesses + yellows) for BOTH modes.
+  // YELLOW_WEIGHT defaults to 1 and may only be overridden explicitly
+  // by callers (e.g. sogBuildHard.js) for one-off experimental builds.
   const words = new Int32Array( NT );
   for ( let i = 0; i < NT; i++ ) words[ i ] = i;
   const t0 = Date.now();

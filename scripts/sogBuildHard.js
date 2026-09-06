@@ -1,5 +1,5 @@
 // Exact-build additional Hard Mode trees (min avg guesses, yw=0) and
-// additional Hard Sea of Greens trees (1:1, yw=0.7), then save + rank.
+// additional Hard Sea of Greens trees (1:1 guesses:yellows, yw=1), then save + rank.
 import fs from 'fs';
 import { buildMatrix, buildStaticOrder } from './sogCommon.js';
 import { setState, buildTreeForWorker, setYellowWeight } from './sogBuild.js';

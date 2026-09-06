@@ -82,7 +82,7 @@ buildSog('seine','normal','seine.tree.greens');
 
 console.log('\n=== Building SOG hard 3 ===');
 buildSog('suint','hard','suint.tree.hard.greens');
-buildSog('saint','hard','saint.tree.hard.greens');
+buildSog('shiny','hard','shiny.tree.hard.greens');
 buildSog('sleet','hard','sleet.tree.hard.greens');
 
 console.log('\nAll final trees built. Validating with sogEval...');
@@ -92,7 +92,7 @@ const treesToValidate = [
   'rated.tree','ranid.tree','rants.tree','saner.tree','manet.tree','lanes.tree',
   'palet.tree.hard','peart.tree.hard','trape.tree.hard','leant.tree.hard','trine.tree.hard','prate.tree.hard',
   'soree.tree.greens','suint.tree.greens','seine.tree.greens',
-  'suint.tree.hard.greens','saint.tree.hard.greens','sleet.tree.hard.greens'
+  'suint.tree.hard.greens','shiny.tree.hard.greens','sleet.tree.hard.greens'
 ];
 const result = spawnSync('node', ['--max-old-space-size=8192','scripts/sogEval.js', ...treesToValidate], {encoding:'utf-8', maxBuffer: 10*1024*1024});
 console.log(result.stdout);

@@ -4,7 +4,7 @@
 //  2) fewest (normal, minimizeLongest approximation: max bucket + tail)
 //  3) hard fastest avg (hard, totalGuesses, yw=0)
 //  4) sog (normal, 1:1)
-//  5) sog hard (hard, 1:1 with yw 0.7? but we use 1 for scan then refine)
+//  5) sog hard (hard, 1:1 guesses:yellows, yw=1)
 import fs from 'fs';
 import { Worker } from 'worker_threads';
 import { NT, NG, GUESSES, TARGETS, buildMatrix, buildStaticOrder, loadCalib, setStaticOrder, evalStarter, newSeenState } from './sogCommon.js';
