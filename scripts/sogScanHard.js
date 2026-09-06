@@ -1,4 +1,4 @@
-// Deep scan of ALL 12,972 guess words as hard-mode starters,
+// Deep scan of ALL 14,855 guess words as hard-mode starters,
 // objective: minimize average guesses (yw=0). Also rescans hard SoG (yw=1).
 import fs from 'fs';
 import { Worker } from 'worker_threads';
@@ -55,7 +55,7 @@ calib = loadCalib();
 
 let t0 = Date.now();
 const hardG = await scanAll( 'hard', 600, 0 ); // pure average guesses
-printTop( 'HARD (min avg guesses): top 40 of 12,972', hardG, 40 );
+printTop( 'HARD (min avg guesses): top 40 of 14,855', hardG, 40 );
 console.log( `  (took ${( ( Date.now() - t0 ) / 1000 ).toFixed( 0 )}s)` );
 
 t0 = Date.now();

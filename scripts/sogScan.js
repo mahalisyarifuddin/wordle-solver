@@ -1,4 +1,5 @@
-// Deep Sea of Greens starter scan over the ENTIRE dictionary (all 12,972 guess words).
+// Deep Sea of Greens starter scan over the ENTIRE dictionary (all 14,855 guess
+// words from tabatkins/wordle-list).
 // Phase 1: 2-ply lookahead scan, normal + hard mode.
 // Phase 2: full-dictionary 2-ply refinement for the top starters.
 // Phase 3: light 3-ply refinement for the finalists.
@@ -49,7 +50,7 @@ const printTop = ( label, results, n ) => {
 };
 
 // ---- main ----
-console.log( 'Building score matrix (2315 x 12972)...' );
+console.log( 'Building score matrix (2315 x 14855)...' );
 matrixBuffer = buildMatrix();
 matrix = new Uint8Array( matrixBuffer );
 console.log( 'Building static candidate order...' );
@@ -59,7 +60,7 @@ calib = loadCalib();
 
 let t0 = Date.now();
 const normal = await scanAll( 'normal', 600 );
-printTop( 'NORMAL scan (2-ply): top 40 of 12,972 starters', normal, 40 );
+printTop( 'NORMAL scan (2-ply): top 40 of 14,855 starters', normal, 40 );
 console.log( `  (took ${( ( Date.now() - t0 ) / 1000 ).toFixed( 0 )}s)` );
 
 t0 = Date.now();
@@ -67,7 +68,7 @@ const hard = await scanAll( 'hard', 600, normal.slice( 0, 700 ).map( r => r[ 0 ]
 printTop( 'HARD scan (2-ply, top-700 normal starters): top 40', hard, 40 );
 console.log( `  (took ${( ( Date.now() - t0 ) / 1000 ).toFixed( 0 )}s)` );
 
-// Full-dictionary 2-ply refinement (all 12,972 second guesses for every big bucket)
+// Full-dictionary 2-ply refinement (all 14,855 second guesses for every big bucket)
 t0 = Date.now();
 const normalFull = await scanAll( 'normal', 'full', normal.slice( 0, 80 ).map( r => r[ 0 ] ) );
 const hardFull = await scanAll( 'hard', 'full', hard.slice( 0, 80 ).map( r => r[ 0 ] ) );

@@ -51,6 +51,21 @@ GROUPS.forEach( g => g.items.forEach( ( [ file, varName ] ) => {
 } ) );
 treeBlocks += '};\n';
 
+// Champion 1:1 (guesses+yellows) stats, computed directly from the shipped
+// tree data so the help text always matches the recalculated trees.
+const championOneToOne = file => {
+  const tree = JSON.parse( readTree( file ) );
+  const counts = tree.ranking.counts;
+  let total = 0, guessSum = 0;
+  for ( let i = 0; i < counts.length; i++ ) {
+    total += counts[ i ] || 0;
+    guessSum += ( counts[ i ] || 0 ) * ( i + 1 );
+  }
+  return guessSum / total + tree.ranking.yellows / total;
+};
+const championSoily = championOneToOne( 'soily.tree.greens' );
+const championSeineHard = championOneToOne( 'seine.tree.hard.greens' );
+
 const groupsJson = JSON.stringify( GROUPS.map( g => ( {
   title: g.title,
   items: g.items.map( ( [ , varName, label ] ) => [ varName, label ] )
@@ -98,7 +113,7 @@ const html = `<!DOCTYPE html>
   <h1>WORDLE<span style="color:#6AAA64">Solver</span></h1>
   <p class="help">Click one of the starting guesses, I'll give you the rest!<br>
   Click the letters to change the color to match your Wordle result, then you'll be given another guess (or click a thumbnail option below).<br>
-  Sea of Greens (1:1 guesses:yellows) champions: <b>SOILY</b> 5.2225 · <b>SEINE (hard)</b> 5.3425.</p>
+  Sea of Greens (1:1 guesses:yellows) champions: <b>SOILY</b> ${championSoily.toFixed( 4 )} · <b>SEINE (hard)</b> ${championSeineHard.toFixed( 4 )}.</p>
   <div class="cols" id="cols"></div>
   <div id="tree"></div>
   <div class="foot">Lightweight standalone (no libraries) — same optimized decision trees as the full app.</div>
