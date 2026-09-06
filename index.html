@@ -88,32 +88,30 @@
     // import axon from '../chipper/dist/js/axon/js/main.js';
     // import phetCore from '../chipper/dist/js/phet-core/js/main.js';
 
-    import totalTraceTree from './data/trace.tree.total.js';
-    import totalSlateTree from './data/slate.tree.total.js';
-    import totalCrateTree from './data/crate.tree.total.js';
-    import totalCraneTree from './data/crane.tree.total.js';
-    import totalReastTree from './data/reast.tree.total.js';
     import totalSaletTree from './data/salet.tree.total.js';
-    import minRanceTree from './data/rance.tree.js';
-    import minAlterTree from './data/alter.tree.js';
+    import totalPaletTree from './data/palet.tree.total.js';
+    import totalRantsTree from './data/rants.tree.total.js';
+    import totalManetTree from './data/manet.tree.total.js';
+    import totalSlateTree from './data/slate.tree.total.js';
+    import totalMorneTree from './data/morne.tree.total.js';
     import minRatedTree from './data/rated.tree.js';
-    import minLanceTree from './data/lance.tree.js';
+    import minRanidTree from './data/ranid.tree.js';
     import minRantsTree from './data/rants.tree.js';
-    import minRonteTree from './data/ronte.tree.js';
-    import hardSaletTree from './data/salet.tree.hard.js';
-    import hardCrampTree from './data/cramp.tree.hard.js';
-    import hardSlateTree from './data/slate.tree.hard.js';
-    import hardLeastTree from './data/least.tree.hard.js';
-    import hardTraceTree from './data/trace.tree.hard.js';
+    import minSanerTree from './data/saner.tree.js';
+    import minManetTree from './data/manet.tree.js';
+    import minLanesTree from './data/lanes.tree.js';
+    import hardPaletTree from './data/palet.tree.hard.js';
+    import hardPeartTree from './data/peart.tree.hard.js';
+    import hardTrapeTree from './data/trape.tree.hard.js';
     import hardLeantTree from './data/leant.tree.hard.js';
-    import greensSoilyTree from './data/soily.tree.greens.js';
-    import greensSeineTree from './data/seine.tree.greens.js';
-    import greensSaiceTree from './data/saice.tree.greens.js';
+    import hardTrineTree from './data/trine.tree.hard.js';
+    import hardPrateTree from './data/prate.tree.hard.js';
+    import greensSoreeTree from './data/soree.tree.greens.js';
     import greensSuintTree from './data/suint.tree.greens.js';
-    import greensHardSeineTree from './data/seine.tree.hard.greens.js';
-    import greensHardSliceTree from './data/slice.tree.hard.greens.js';
-    import greensHardShinyTree from './data/shiny.tree.hard.greens.js';
+    import greensSeineTree from './data/seine.tree.greens.js';
     import greensHardSuintTree from './data/suint.tree.hard.greens.js';
+    import greensHardSaintTree from './data/saint.tree.hard.greens.js';
+    import greensHardSleetTree from './data/sleet.tree.hard.greens.js';
     import targetWords from './data/targetWords.js';
     import wordCheck from './data/wordCheck.js';
 
@@ -457,49 +455,53 @@
               children: [
                 new scenery.Text( 'Fastest Average', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
                 createTreeButton( totalSaletTree ),
-                createTreeButton( totalReastTree ),
-                createTreeButton( totalCrateTree ),
-                createTreeButton( totalTraceTree ),
+                createTreeButton( totalPaletTree ),
+                createTreeButton( totalRantsTree ),
+                createTreeButton( totalManetTree ),
                 createTreeButton( totalSlateTree ),
-                createTreeButton( totalCraneTree )
+                createTreeButton( totalMorneTree )
               ]
             } ),
             new scenery.FlowBox( {
               orientation: 'vertical',
               children: [
-                new scenery.Text( 'Fewest 5+', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
-                createTreeButton( minRanceTree ),
-                createTreeButton( minRantsTree ),
+                new scenery.Text( 'Fewest', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
                 createTreeButton( minRatedTree ),
-                createTreeButton( minRonteTree ),
-                createTreeButton( minAlterTree ),
-                createTreeButton( minLanceTree )
+                createTreeButton( minRanidTree ),
+                createTreeButton( minRantsTree ),
+                createTreeButton( minSanerTree ),
+                createTreeButton( minManetTree ),
+                createTreeButton( minLanesTree )
               ]
             } ),
             new scenery.FlowBox( {
               orientation: 'vertical',
               children: [
                 new scenery.Text( 'Hard Mode', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
-                createTreeButton( hardSaletTree ),
-                createTreeButton( hardSlateTree ),
-                createTreeButton( hardLeastTree ),
-                createTreeButton( hardTraceTree ),
+                createTreeButton( hardPaletTree ),
+                createTreeButton( hardPeartTree ),
+                createTreeButton( hardTrapeTree ),
                 createTreeButton( hardLeantTree ),
-                createTreeButton( hardCrampTree )
+                createTreeButton( hardTrineTree ),
+                createTreeButton( hardPrateTree )
               ]
             } ),
             new scenery.FlowBox( {
               orientation: 'vertical',
               children: [
                 new scenery.Text( 'Sea of Greens', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
-                createTreeButton( greensSoilyTree, 'SOILY' ),
-                createTreeButton( greensSeineTree, 'SEINE' ),
-                createTreeButton( greensSaiceTree, 'SAICE' ),
+                createTreeButton( greensSoreeTree, 'SOREE' ),
                 createTreeButton( greensSuintTree, 'SUINT' ),
-                createTreeButton( greensHardSeineTree, 'SEINE (Hard)' ),
-                createTreeButton( greensHardSliceTree, 'SLICE (Hard)' ),
-                createTreeButton( greensHardShinyTree, 'SHINY (Hard)' ),
-                createTreeButton( greensHardSuintTree, 'SUINT (Hard)' )
+                createTreeButton( greensSeineTree, 'SEINE' )
+              ]
+            } ),
+            new scenery.FlowBox( {
+              orientation: 'vertical',
+              children: [
+                new scenery.Text( 'Sea of Greens Hard', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
+                createTreeButton( greensHardSuintTree, 'SUINT (Hard)' ),
+                createTreeButton( greensHardSaintTree, 'SAINT (Hard)' ),
+                createTreeButton( greensHardSleetTree, 'SLEET (Hard)' )
               ]
             } ),
           ]
