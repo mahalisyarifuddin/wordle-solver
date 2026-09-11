@@ -9,12 +9,6 @@ const readTree = name => {
   return s.slice( s.indexOf( '{' ) );
 };
 
-// Packed 5-letter dictionaries + binary-search checker (same file the full app
-// inlines). Regenerate with server/buildWordCheck.js when the dictionaries change.
-const wordCheckJs = fs.readFileSync( 'data/wordCheck.js', 'utf8' )
-  .replace( /export default /, 'var WORD_CHECK = ' )
-  .trim();
-
 // [file, varName, label]
 const GROUPS = [
   { title: 'Fastest Average', items: [
@@ -123,13 +117,6 @@ const html = `<!DOCTYPE html>
   .thumb .t.green{background:var(--green);}
   .note{font-size:14px;color:var(--gray);}
   .err{color:#B00020;}
-  .check{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 14px;}
-  .check label{font-size:14px;color:var(--gray);}
-  .check input{width:100px;padding:4px 6px;font-size:14px;text-transform:uppercase;letter-spacing:2px;border:1px solid #ccc;border-radius:4px;font-family:inherit;}
-  .check button{padding:4px 10px;font-size:13px;cursor:pointer;border:1px solid var(--gray);border-radius:4px;background:#f5f5f5;font-family:inherit;}
-  .checkOut{flex-basis:100%;font-size:14px;line-height:1.35;}
-  .checkOut.ok{color:var(--green);}
-  .checkOut.err{color:#B00020;}
   .foot{margin-top:22px;font-size:12px;color:#999;}
   @media (max-width:380px){ .tile{width:54px;height:54px;font-size:28px;} .thumb .t{width:27px;height:27px;font-size:14px;} }
 </style>
@@ -140,19 +127,12 @@ const html = `<!DOCTYPE html>
   <p class="help">Click one of the starting guesses, I'll give you the rest!<br>
   Click the letters to change the color to match your Wordle result, then you'll be given another guess (or click a thumbnail option below).<br>
   Sea of Greens (1:1 guesses:yellows) champions: <b>${championNormalLabel}</b> ${championNormal.value.toFixed( 4 )} · <b>${championHardLabel}</b> ${championHard.value.toFixed( 4 )}.</p>
-  <div class="check">
-    <label for="gcInput">Check a word:</label>
-    <input id="gcInput" maxlength="5" placeholder="BEIGE" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false"/>
-    <button id="gcButton" type="button">Check</button>
-    <div class="checkOut" id="gcOut"></div>
-  </div>
   <div class="cols" id="cols"></div>
   <div id="tree"></div>
   <div class="foot">Lightweight standalone (no libraries) — same optimized decision trees as the full app.</div>
 </div>
 <script>
 __TREES__
-__WORDCHECK__
 (function(){
 'use strict';
 var GROUPS = __GROUPS__;
@@ -293,33 +273,6 @@ GROUPS.forEach(function(group){
   });
   cols.appendChild(col);
 });
-
-// ---- "Is this a valid guess?" checker ----
-var gcInput = document.getElementById('gcInput');
-var gcOut = document.getElementById('gcOut');
-var gcRun = function(){
-  var w = (gcInput.value || '').toLowerCase().replace(/[^a-z]/g, '');
-  if(w.length !== 5){
-    gcOut.textContent = 'Type exactly 5 letters (a\u2013z).';
-    gcOut.className = 'checkOut err';
-    return;
-  }
-  var r = WORD_CHECK.find(w);
-  if(r === 0){
-    gcOut.textContent = w.toUpperCase() + ' is NOT a valid guess.';
-    gcOut.className = 'checkOut err';
-  } else if(r === 1){
-    gcOut.textContent = w.toUpperCase() + ' is a valid guess \u2014 not among the ' + WORD_CHECK.tCount.toLocaleString() + ' possible answers.';
-    gcOut.className = 'checkOut ok';
-  } else {
-    gcOut.textContent = w.toUpperCase() + ' is a valid guess and can be the hidden answer.';
-    gcOut.className = 'checkOut ok';
-  }
-};
-document.getElementById('gcButton').addEventListener('click', gcRun);
-gcInput.addEventListener('keydown', function(e){ if(e.key === 'Enter') gcRun(); });
-gcInput.value = 'beige';
-gcRun();
 })();
 </script>
 </body>
@@ -329,6 +282,5 @@ gcRun();
 // as replacement patterns by String.replace.
 fs.writeFileSync( 'wordle-solver-lite.html', html
   .replace( '__TREES__', () => treeBlocks )
-  .replace( '__WORDCHECK__', () => wordCheckJs )
   .replace( '__GROUPS__', () => groupsJson ) );
 console.log( 'Created wordle-solver-lite.html (' + ( html.length / 1024 ).toFixed( 0 ) + ' KB template)' );
