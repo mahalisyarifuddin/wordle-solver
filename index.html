@@ -60,21 +60,7 @@
     import hardLeantTree from './data/leant.tree.hard.js';
     import hardTrineTree from './data/trine.tree.hard.js';
     import hardPrateTree from './data/prate.tree.hard.js';
-    // Sea of Greens — legacy 1:1 (normal 1.0, hard 0.7) trees
-    import greensSoreeTree from './data/soree.tree.greens.js';
-    import greensSuintTree from './data/suint.tree.greens.js';
-    import greensSeineTree from './data/seine.tree.greens.js';
-    import greensHardSuintTree from './data/suint.tree.hard.greens.js';
-    import greensHardSaintTree from './data/saint.tree.hard.greens.js';
-    import greensHardSleetTree from './data/sleet.tree.hard.greens.js';
-    // Sea of Greens — knee-tuned (normal 0.35, hard 0.55) — Pareto optimal trade-off (first tuning)
-    import kneePaletTree from './data/palet.tree.knee.js';
-    import kneeSaletTree from './data/salet.tree.knee.js';
-    import kneeSaintTree from './data/saint.tree.knee.js';
-    import kneeHardPaletTree from './data/palet.tree.hard.knee.js';
-    import kneeHardSaletTree from './data/salet.tree.hard.knee.js';
-    import kneeHardSuintTree from './data/suint.tree.hard.knee.js';
-    // Sea of Greens — SAME RATIO 0.4 for both normal and hard (second tuning, user request)
+    // Sea of Greens — SAME RATIO 0.4 for both normal and hard (knee-tuned, overwriting old columns)
     // Best 6 normal under 0.4: pores, poles, moles, mores, pones, tores
     import samePoresTree from './data/pores.tree.same0.4.js';
     import samePolesTree from './data/poles.tree.same0.4.js';
@@ -466,60 +452,24 @@
               orientation: 'vertical',
               children: [
                 new scenery.Text( 'Sea of Greens', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
-                createTreeButton( greensSoreeTree, 'SOREE (1:1)' ),
-                createTreeButton( greensSuintTree, 'SUINT (1:1)' ),
-                createTreeButton( greensSeineTree, 'SEINE (1:1)' )
+                createTreeButton( samePoresTree, 'PORES' ),
+                createTreeButton( samePolesTree, 'POLES' ),
+                createTreeButton( sameMolesTree, 'MOLES' ),
+                createTreeButton( sameMoresTree, 'MORES' ),
+                createTreeButton( samePonesTree, 'PONES' ),
+                createTreeButton( sameToresTree, 'TORES' )
               ]
             } ),
             new scenery.FlowBox( {
               orientation: 'vertical',
               children: [
                 new scenery.Text( 'Sea of Greens Hard', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
-                createTreeButton( greensHardSuintTree, 'SUINT (Hard 0.7)' ),
-                createTreeButton( greensHardSaintTree, 'SAINT (Hard 0.7)' ),
-                createTreeButton( greensHardSleetTree, 'SLEET (Hard 0.7)' )
-              ]
-            } ),
-            new scenery.FlowBox( {
-              orientation: 'vertical',
-              children: [
-                new scenery.Text( 'SOG Knee (0.35)', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
-                createTreeButton( kneePaletTree, 'PALET (Knee 0.35)' ),
-                createTreeButton( kneeSaletTree, 'SALET (Knee 0.35)' ),
-                createTreeButton( kneeSaintTree, 'SAINT (Knee 0.35)' )
-              ]
-            } ),
-            new scenery.FlowBox( {
-              orientation: 'vertical',
-              children: [
-                new scenery.Text( 'SOG Knee Hard (0.55)', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
-                createTreeButton( kneeHardPaletTree, 'PALET Hard Knee 0.55' ),
-                createTreeButton( kneeHardSaletTree, 'SALET Hard Knee 0.55' ),
-                createTreeButton( kneeHardSuintTree, 'SUINT Hard Knee 0.55' )
-              ]
-            } ),
-            new scenery.FlowBox( {
-              orientation: 'vertical',
-              children: [
-                new scenery.Text( 'SOG Same Ratio 0.4 (Normal) - Best 6', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
-                createTreeButton( samePoresTree, 'PORES (0.4) #1' ),
-                createTreeButton( samePolesTree, 'POLES (0.4) #2' ),
-                createTreeButton( sameMolesTree, 'MOLES (0.4) #3' ),
-                createTreeButton( sameMoresTree, 'MORES (0.4) #4' ),
-                createTreeButton( samePonesTree, 'PONES (0.4) #5' ),
-                createTreeButton( sameToresTree, 'TORES (0.4) #6' )
-              ]
-            } ),
-            new scenery.FlowBox( {
-              orientation: 'vertical',
-              children: [
-                new scenery.Text( 'SOG Same Ratio 0.4 (Hard) - Best 6', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
-                createTreeButton( sameHardPoresTree, 'PORES Hard (0.4) #1' ),
-                createTreeButton( sameHardTonesTree, 'TONES Hard (0.4) #2' ),
-                createTreeButton( sameHardToresTree, 'TORES Hard (0.4) #3' ),
-                createTreeButton( sameHardTarnsTree, 'TARNS Hard (0.4) #4' ),
-                createTreeButton( sameHardTilesTree, 'TILES Hard (0.4) #5' ),
-                createTreeButton( sameHardTolesTree, 'TOLES Hard (0.4) #6' )
+                createTreeButton( sameHardPoresTree, 'PORES (Hard)' ),
+                createTreeButton( sameHardTonesTree, 'TONES (Hard)' ),
+                createTreeButton( sameHardToresTree, 'TORES (Hard)' ),
+                createTreeButton( sameHardTarnsTree, 'TARNS (Hard)' ),
+                createTreeButton( sameHardTilesTree, 'TILES (Hard)' ),
+                createTreeButton( sameHardTolesTree, 'TOLES (Hard)' )
               ]
             } ),
           ]
