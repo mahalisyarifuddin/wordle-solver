@@ -122,11 +122,13 @@ export const newSeenState = () => ( {
   touched: new Int32Array( 243 )
 } );
 
-// Knee-point tuned weights (see sogBuild.js for derivation)
-// Normal: 0.35 (avg knee 0.29, best Pareto 0.4), Hard: 0.55 (avg 0.43, best 0.6)
-export const KNEE_WEIGHT_NORMAL = 0.35;
-export const KNEE_WEIGHT_HARD = 0.55;
-export const getKneeWeight = mode => mode === 'hard' ? KNEE_WEIGHT_HARD : KNEE_WEIGHT_NORMAL;
+// Knee-point tuned weights - SAME RATIO for normal and hard (user request)
+// First tuning: normal 0.35, hard 0.55. Second tuning: same ratio 0.4 for both (overlapping knee region)
+// Pareto analysis: normal knee avg 0.29 (best 0.4), hard avg 0.43 (best 0.6) → compromise 0.4
+export const KNEE_WEIGHT_SAME = 0.4;
+export const KNEE_WEIGHT_NORMAL = KNEE_WEIGHT_SAME;
+export const KNEE_WEIGHT_HARD = KNEE_WEIGHT_SAME;
+export const getKneeWeight = mode => KNEE_WEIGHT_SAME;
 
 // Evaluate one starter (guess index g) under the weighted (guesses + yw*yellows) objective.
 // Returns { e: expectedGuesses, y: expectedYellows } using 2-ply lookahead with est tables.

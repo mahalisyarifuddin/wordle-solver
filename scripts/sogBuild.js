@@ -360,10 +360,13 @@ const localSearch = ( tree, words, mode, passes ) => {
 // - Hard: avg knee 0.43 (suint 0.5, saint 0.4, sleet 0.5, seine 0.6, soily 0.4, palet 0.2)
 //         overall Pareto best = palet yw=0.6-0.7 (0.6 origin 0.229, 0.7 dist 0.696)
 //         previous 0.7 was near knee but slightly high; 0.5-0.6 is knee.
-// Chosen retuned weights: normal 0.35 (balanced avg 0.29 + best 0.4), hard 0.55 (avg 0.43 + best 0.6)
-// For backward compat, if YELLOW_WEIGHT is manually set, respect it; otherwise use knee-tuned defaults.
-const KNEE_WEIGHT_NORMAL = 0.35;
-const KNEE_WEIGHT_HARD = 0.55;
+// First retuning: normal 0.35, hard 0.55 (balanced avg+best)
+// Second retuning (same ratio for both modes): 0.4 is overlapping knee region for both
+// (normal knee 0.29-0.4, hard knee 0.4-0.5) and is overall Pareto best for normal.
+// Chosen SAME ratio: 0.4 for both normal and hard (w_g=0.714, w_y=0.286 in w_g*G + w_y*Y, w_g+w_y=1)
+const KNEE_WEIGHT_SAME = 0.4;
+const KNEE_WEIGHT_NORMAL = KNEE_WEIGHT_SAME;
+const KNEE_WEIGHT_HARD = KNEE_WEIGHT_SAME;
 
 // ---- full build for a starter ----
 // Root is forced to the starter; its buckets are built greedily.
