@@ -60,12 +60,21 @@
     import hardLeantTree from './data/leant.tree.hard.js';
     import hardTrineTree from './data/trine.tree.hard.js';
     import hardPrateTree from './data/prate.tree.hard.js';
-    import greensSoreeTree from './data/soree.tree.greens.js';
-    import greensSuintTree from './data/suint.tree.greens.js';
-    import greensSeineTree from './data/seine.tree.greens.js';
-    import greensHardSuintTree from './data/suint.tree.hard.greens.js';
-    import greensHardSaintTree from './data/saint.tree.hard.greens.js';
-    import greensHardSleetTree from './data/sleet.tree.hard.greens.js';
+    // Sea of Greens — SAME RATIO 0.4 for both normal and hard (knee-tuned, overwriting old columns)
+    // Best 6 normal under 0.4: pores, poles, moles, mores, pones, tores
+    import samePoresTree from './data/pores.tree.same0.4.js';
+    import samePolesTree from './data/poles.tree.same0.4.js';
+    import sameMolesTree from './data/moles.tree.same0.4.js';
+    import sameMoresTree from './data/mores.tree.same0.4.js';
+    import samePonesTree from './data/pones.tree.same0.4.js';
+    import sameToresTree from './data/tores.tree.same0.4.js';
+    // Best 6 hard under 0.4: pores, tones, tores, tarns, tiles, toles
+    import sameHardPoresTree from './data/pores.tree.hard.same0.4.js';
+    import sameHardTonesTree from './data/tones.tree.hard.same0.4.js';
+    import sameHardToresTree from './data/tores.tree.hard.same0.4.js';
+    import sameHardTarnsTree from './data/tarns.tree.hard.same0.4.js';
+    import sameHardTilesTree from './data/tiles.tree.hard.same0.4.js';
+    import sameHardTolesTree from './data/toles.tree.hard.same0.4.js';
     import targetWords from './data/targetWords.js';
 
     const fontFamily = "'Clear Sans', 'Helvetica Neue', Arial, sans-serif";
@@ -443,18 +452,24 @@
               orientation: 'vertical',
               children: [
                 new scenery.Text( 'Sea of Greens', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
-                createTreeButton( greensSoreeTree, 'SOREE' ),
-                createTreeButton( greensSuintTree, 'SUINT' ),
-                createTreeButton( greensSeineTree, 'SEINE' )
+                createTreeButton( samePoresTree, 'PORES' ),
+                createTreeButton( samePolesTree, 'POLES' ),
+                createTreeButton( sameMolesTree, 'MOLES' ),
+                createTreeButton( sameMoresTree, 'MORES' ),
+                createTreeButton( samePonesTree, 'PONES' ),
+                createTreeButton( sameToresTree, 'TORES' )
               ]
             } ),
             new scenery.FlowBox( {
               orientation: 'vertical',
               children: [
                 new scenery.Text( 'Sea of Greens Hard', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
-                createTreeButton( greensHardSuintTree, 'SUINT (Hard)' ),
-                createTreeButton( greensHardSaintTree, 'SAINT (Hard)' ),
-                createTreeButton( greensHardSleetTree, 'SLEET (Hard)' )
+                createTreeButton( sameHardPoresTree, 'PORES (Hard)' ),
+                createTreeButton( sameHardTonesTree, 'TONES (Hard)' ),
+                createTreeButton( sameHardToresTree, 'TORES (Hard)' ),
+                createTreeButton( sameHardTarnsTree, 'TARNS (Hard)' ),
+                createTreeButton( sameHardTilesTree, 'TILES (Hard)' ),
+                createTreeButton( sameHardTolesTree, 'TOLES (Hard)' )
               ]
             } ),
           ]

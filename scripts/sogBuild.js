@@ -352,6 +352,22 @@ const localSearch = ( tree, words, mode, passes ) => {
   }
 };
 
+// ---- knee-point tuned weights ----
+// Pareto analysis (exact trees, 6 starters x 11 weights normal, 6x8 hard):
+// - Normal: avg knee 0.29 across starters (soree 0.25, suint 0.30, seine 0.25, soily 0.30, salet 0.25, palet 0.40)
+//           overall Pareto best = palet yw=0.4 (avgG 4.2540, avgY 2.2882, dist from line 0.655)
+//           previous 1.0 was far beyond knee (diminishing returns: +0.2 avgG for -0.21 avgY from 0.4->1.0)
+// - Hard: avg knee 0.43 (suint 0.5, saint 0.4, sleet 0.5, seine 0.6, soily 0.4, palet 0.2)
+//         overall Pareto best = palet yw=0.6-0.7 (0.6 origin 0.229, 0.7 dist 0.696)
+//         previous 0.7 was near knee but slightly high; 0.5-0.6 is knee.
+// First retuning: normal 0.35, hard 0.55 (balanced avg+best)
+// Second retuning (same ratio for both modes): 0.4 is overlapping knee region for both
+// (normal knee 0.29-0.4, hard knee 0.4-0.5) and is overall Pareto best for normal.
+// Chosen SAME ratio: 0.4 for both normal and hard (w_g=0.714, w_y=0.286 in w_g*G + w_y*Y, w_g+w_y=1)
+const KNEE_WEIGHT_SAME = 0.4;
+const KNEE_WEIGHT_NORMAL = KNEE_WEIGHT_SAME;
+const KNEE_WEIGHT_HARD = KNEE_WEIGHT_SAME;
+
 // ---- full build for a starter ----
 // Root is forced to the starter; its buckets are built greedily.
 const buildRoot = ( starter, mode ) => {
@@ -402,8 +418,12 @@ const buildRoot = ( starter, mode ) => {
 };
 
 const buildTree = ( starter, mode ) => {
-  // per-mode yellow weight (tuned on the seine benchmark): normal 1.0, hard 0.7
-  if ( mode === 'hard' && YELLOW_WEIGHT === 1 ) YELLOW_WEIGHT = 0.7;
+  // per-mode yellow weight retuned to knee point (minimize guesses vs minimize yellows)
+  // See KNEE_WEIGHT_* above for derivation. Previous: normal 1.0, hard 0.7.
+  // If YELLOW_WEIGHT is still default 1, apply knee-tuned per-mode default.
+  if ( YELLOW_WEIGHT === 1 ) {
+    YELLOW_WEIGHT = mode === 'hard' ? KNEE_WEIGHT_HARD : KNEE_WEIGHT_NORMAL;
+  }
   const words = new Int32Array( NT );
   for ( let i = 0; i < NT; i++ ) words[ i ] = i;
   const t0 = Date.now();

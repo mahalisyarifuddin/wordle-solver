@@ -36,14 +36,20 @@ const GROUPS = [
     [ 'prate.tree.hard', 'T_HARD_PRATE', 'PRATE' ]
   ] },
   { title: 'Sea of Greens', items: [
-    [ 'soree.tree.greens', 'T_GREENS_SOREE', 'SOREE' ],
-    [ 'suint.tree.greens', 'T_GREENS_SUINT', 'SUINT' ],
-    [ 'seine.tree.greens', 'T_GREENS_SEINE', 'SEINE' ]
+    [ 'pores.tree.same0.4', 'T_GREENS_PORES', 'PORES' ],
+    [ 'poles.tree.same0.4', 'T_GREENS_POLES', 'POLES' ],
+    [ 'moles.tree.same0.4', 'T_GREENS_MOLES', 'MOLES' ],
+    [ 'mores.tree.same0.4', 'T_GREENS_MORES', 'MORES' ],
+    [ 'pones.tree.same0.4', 'T_GREENS_PONES', 'PONES' ],
+    [ 'tores.tree.same0.4', 'T_GREENS_TORES', 'TORES' ]
   ] },
   { title: 'Sea of Greens Hard', items: [
-    [ 'suint.tree.hard.greens', 'T_GREENS_SUINT_HARD', 'SUINT (HARD)' ],
-    [ 'saint.tree.hard.greens', 'T_GREENS_SAINT_HARD', 'SAINT (HARD)' ],
-    [ 'sleet.tree.hard.greens', 'T_GREENS_SLEET_HARD', 'SLEET (HARD)' ]
+    [ 'pores.tree.hard.same0.4', 'T_GREENS_PORES_HARD', 'PORES (HARD)' ],
+    [ 'tones.tree.hard.same0.4', 'T_GREENS_TONES_HARD', 'TONES (HARD)' ],
+    [ 'tores.tree.hard.same0.4', 'T_GREENS_TORES_HARD', 'TORES (HARD)' ],
+    [ 'tarns.tree.hard.same0.4', 'T_GREENS_TARNS_HARD', 'TARNS (HARD)' ],
+    [ 'tiles.tree.hard.same0.4', 'T_GREENS_TILES_HARD', 'TILES (HARD)' ],
+    [ 'toles.tree.hard.same0.4', 'T_GREENS_TOLES_HARD', 'TOLES (HARD)' ]
   ] }
 ];
 
@@ -73,8 +79,8 @@ const championBest = files => {
   }
   return best;
 };
-const championNormal = championBest( [ 'soree.tree.greens', 'suint.tree.greens', 'seine.tree.greens' ] );
-const championHard = championBest( [ 'suint.tree.hard.greens', 'saint.tree.hard.greens', 'sleet.tree.hard.greens' ] );
+const championNormal = championBest( [ 'pores.tree.same0.4', 'poles.tree.same0.4', 'moles.tree.same0.4', 'mores.tree.same0.4', 'pones.tree.same0.4', 'tores.tree.same0.4' ] );
+const championHard = championBest( [ 'pores.tree.hard.same0.4', 'tones.tree.hard.same0.4', 'tores.tree.hard.same0.4', 'tarns.tree.hard.same0.4', 'tiles.tree.hard.same0.4', 'toles.tree.hard.same0.4' ] );
 const championLabel = file => ( GROUPS.find( g => g.title === 'Sea of Greens' ).items.find( i => i[ 0 ] === file ) || [] )[ 2 ] || file;
 const championNormalLabel = championLabel( championNormal.file );
 const championHardLabel = championLabel( championHard.file );

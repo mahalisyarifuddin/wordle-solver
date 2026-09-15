@@ -122,11 +122,21 @@ export const newSeenState = () => ( {
   touched: new Int32Array( 243 )
 } );
 
-// Evaluate one starter (guess index g) under the 1:1 (guesses+yellows) objective.
+// Knee-point tuned weights - SAME RATIO for normal and hard (user request)
+// First tuning: normal 0.35, hard 0.55. Second tuning: same ratio 0.4 for both (overlapping knee region)
+// Pareto analysis: normal knee avg 0.29 (best 0.4), hard avg 0.43 (best 0.6) → compromise 0.4
+export const KNEE_WEIGHT_SAME = 0.4;
+export const KNEE_WEIGHT_NORMAL = KNEE_WEIGHT_SAME;
+export const KNEE_WEIGHT_HARD = KNEE_WEIGHT_SAME;
+export const getKneeWeight = mode => KNEE_WEIGHT_SAME;
+
+// Evaluate one starter (guess index g) under the weighted (guesses + yw*yellows) objective.
 // Returns { e: expectedGuesses, y: expectedYellows } using 2-ply lookahead with est tables.
 // mode: 'normal' | 'hard'. candK: candidate budget (number or 'full').
 // st: optional per-worker scratch state from newSeenState().
-export const evalStarter = ( g, matrix, calib, mode, candK = 600, st = null, yw = 1 ) => {
+// yw: yellow weight; if null, uses knee-tuned default per mode.
+export const evalStarter = ( g, matrix, calib, mode, candK = 600, st = null, yw = null ) => {
+  if ( yw === null || yw === undefined ) yw = getKneeWeight( mode );
   const est = calib[ mode ];
   if ( !st ) st = newSeenState();
   const seenGen = st.arr;
