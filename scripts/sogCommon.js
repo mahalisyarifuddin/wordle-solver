@@ -122,11 +122,19 @@ export const newSeenState = () => ( {
   touched: new Int32Array( 243 )
 } );
 
-// Evaluate one starter (guess index g) under the 1:1 (guesses+yellows) objective.
+// Knee-point tuned weights (see sogBuild.js for derivation)
+// Normal: 0.35 (avg knee 0.29, best Pareto 0.4), Hard: 0.55 (avg 0.43, best 0.6)
+export const KNEE_WEIGHT_NORMAL = 0.35;
+export const KNEE_WEIGHT_HARD = 0.55;
+export const getKneeWeight = mode => mode === 'hard' ? KNEE_WEIGHT_HARD : KNEE_WEIGHT_NORMAL;
+
+// Evaluate one starter (guess index g) under the weighted (guesses + yw*yellows) objective.
 // Returns { e: expectedGuesses, y: expectedYellows } using 2-ply lookahead with est tables.
 // mode: 'normal' | 'hard'. candK: candidate budget (number or 'full').
 // st: optional per-worker scratch state from newSeenState().
-export const evalStarter = ( g, matrix, calib, mode, candK = 600, st = null, yw = 1 ) => {
+// yw: yellow weight; if null, uses knee-tuned default per mode.
+export const evalStarter = ( g, matrix, calib, mode, candK = 600, st = null, yw = null ) => {
+  if ( yw === null || yw === undefined ) yw = getKneeWeight( mode );
   const est = calib[ mode ];
   if ( !st ) st = newSeenState();
   const seenGen = st.arr;
