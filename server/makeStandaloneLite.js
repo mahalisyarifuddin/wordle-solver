@@ -35,21 +35,21 @@ const GROUPS = [
     [ 'trine.tree.hard', 'T_HARD_TRINE', 'TRINE' ],
     [ 'prate.tree.hard', 'T_HARD_PRATE', 'PRATE' ]
   ] },
-  { title: 'Sea of Greens', items: [
-    [ 'pores.tree.same0.4', 'T_GREENS_PORES', 'PORES' ],
-    [ 'poles.tree.same0.4', 'T_GREENS_POLES', 'POLES' ],
-    [ 'moles.tree.same0.4', 'T_GREENS_MOLES', 'MOLES' ],
-    [ 'mores.tree.same0.4', 'T_GREENS_MORES', 'MORES' ],
-    [ 'pones.tree.same0.4', 'T_GREENS_PONES', 'PONES' ],
-    [ 'tores.tree.same0.4', 'T_GREENS_TORES', 'TORES' ]
+  { title: 'SoG Capped Knee', items: [
+    [ 'palet.tree.capped', 'T_CAPPED_PALET', 'PALET' ],
+    [ 'poles.tree.capped', 'T_CAPPED_POLES', 'POLES' ],
+    [ 'moles.tree.capped', 'T_CAPPED_MOLES', 'MOLES' ],
+    [ 'pores.tree.capped', 'T_CAPPED_PORES', 'PORES' ],
+    [ 'mores.tree.capped', 'T_CAPPED_MORES', 'MORES' ],
+    [ 'toles.tree.capped', 'T_CAPPED_TOLES', 'TOLES' ]
   ] },
-  { title: 'Sea of Greens Hard', items: [
-    [ 'pores.tree.hard.same0.4', 'T_GREENS_PORES_HARD', 'PORES (HARD)' ],
-    [ 'tones.tree.hard.same0.4', 'T_GREENS_TONES_HARD', 'TONES (HARD)' ],
-    [ 'tores.tree.hard.same0.4', 'T_GREENS_TORES_HARD', 'TORES (HARD)' ],
-    [ 'tarns.tree.hard.same0.4', 'T_GREENS_TARNS_HARD', 'TARNS (HARD)' ],
-    [ 'tiles.tree.hard.same0.4', 'T_GREENS_TILES_HARD', 'TILES (HARD)' ],
-    [ 'toles.tree.hard.same0.4', 'T_GREENS_TOLES_HARD', 'TOLES (HARD)' ]
+  { title: 'SoG Capped Knee Hard', items: [
+    [ 'palet.tree.hard.capped', 'T_CAPPED_PALET_HARD', 'PALET (HARD)' ],
+    [ 'cramp.tree.hard.capped', 'T_CAPPED_CRAMP_HARD', 'CRAMP (HARD)' ],
+    [ 'pores.tree.hard.capped', 'T_CAPPED_PORES_HARD', 'PORES (HARD)' ],
+    [ 'trape.tree.hard.capped', 'T_CAPPED_TRAPE_HARD', 'TRAPE (HARD)' ],
+    [ 'prate.tree.hard.capped', 'T_CAPPED_PRATE_HARD', 'PRATE (HARD)' ],
+    [ 'peart.tree.hard.capped', 'T_CAPPED_PEART_HARD', 'PEART (HARD)' ]
   ] }
 ];
 
@@ -79,9 +79,9 @@ const championBest = files => {
   }
   return best;
 };
-const championNormal = championBest( [ 'pores.tree.same0.4', 'poles.tree.same0.4', 'moles.tree.same0.4', 'mores.tree.same0.4', 'pones.tree.same0.4', 'tores.tree.same0.4' ] );
-const championHard = championBest( [ 'pores.tree.hard.same0.4', 'tones.tree.hard.same0.4', 'tores.tree.hard.same0.4', 'tarns.tree.hard.same0.4', 'tiles.tree.hard.same0.4', 'toles.tree.hard.same0.4' ] );
-const championLabel = file => ( GROUPS.find( g => g.title === 'Sea of Greens' ).items.find( i => i[ 0 ] === file ) || [] )[ 2 ] || file;
+const championNormal = championBest( [ 'palet.tree.capped', 'poles.tree.capped', 'moles.tree.capped', 'pores.tree.capped', 'mores.tree.capped', 'toles.tree.capped' ] );
+const championHard = championBest( [ 'palet.tree.hard.capped', 'cramp.tree.hard.capped', 'pores.tree.hard.capped', 'trape.tree.hard.capped', 'prate.tree.hard.capped', 'peart.tree.hard.capped' ] );
+const championLabel = file => ( GROUPS.find( g => g.title === 'SoG Capped Knee' ).items.find( i => i[ 0 ] === file ) || [] )[ 2 ] || file;
 const championNormalLabel = championLabel( championNormal.file );
 const championHardLabel = championLabel( championHard.file );
 
