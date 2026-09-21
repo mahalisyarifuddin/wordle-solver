@@ -126,9 +126,9 @@ export const newSeenState = () => ( {
 // First tuning: normal 0.35, hard 0.55. Second tuning: same ratio 0.4 for both (overlapping knee region)
 // Pareto analysis: normal knee avg 0.29 (best 0.4), hard avg 0.43 (best 0.6) → compromise 0.4
 export const KNEE_WEIGHT_SAME = 0.30;
-export const KNEE_WEIGHT_NORMAL = 0.25;
-export const KNEE_WEIGHT_HARD = 0.35;
-export const getKneeWeight = mode => mode === "hard" ? KNEE_WEIGHT_HARD : KNEE_WEIGHT_NORMAL;
+export const KNEE_WEIGHT_NORMAL = KNEE_WEIGHT_SAME;
+export const KNEE_WEIGHT_HARD = KNEE_WEIGHT_SAME;
+export const getKneeWeight = mode => KNEE_WEIGHT_SAME;
 
 // Evaluate one starter (guess index g) under the weighted (guesses + yw*yellows) objective.
 // Returns { e: expectedGuesses, y: expectedYellows } using 2-ply lookahead with est tables.

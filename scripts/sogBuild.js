@@ -365,8 +365,8 @@ const localSearch = ( tree, words, mode, passes ) => {
 // (normal knee 0.29-0.4, hard knee 0.4-0.5) and is overall Pareto best for normal.
 // Chosen SAME ratio: 0.4 for both normal and hard (w_g=0.714, w_y=0.286 in w_g*G + w_y*Y, w_g+w_y=1)
 const KNEE_WEIGHT_SAME = 0.30;
-const KNEE_WEIGHT_NORMAL = 0.25;
-const KNEE_WEIGHT_HARD = 0.35;
+const KNEE_WEIGHT_NORMAL = KNEE_WEIGHT_SAME;
+const KNEE_WEIGHT_HARD = KNEE_WEIGHT_SAME;
 
 // ---- full build for a starter ----
 // Root is forced to the starter; its buckets are built greedily.
