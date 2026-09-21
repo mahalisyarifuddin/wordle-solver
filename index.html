@@ -60,21 +60,21 @@
     import hardLeantTree from './data/leant.tree.hard.js';
     import hardTrineTree from './data/trine.tree.hard.js';
     import hardPrateTree from './data/prate.tree.hard.js';
-    // Sea of Greens — SAME RATIO 0.4 for both normal and hard (knee-tuned, overwriting old columns)
-    // Best 6 normal under 0.4: pores, poles, moles, mores, pones, tores
-    import samePoresTree from './data/pores.tree.same0.4.js';
-    import samePolesTree from './data/poles.tree.same0.4.js';
-    import sameMolesTree from './data/moles.tree.same0.4.js';
-    import sameMoresTree from './data/mores.tree.same0.4.js';
-    import samePonesTree from './data/pones.tree.same0.4.js';
-    import sameToresTree from './data/tores.tree.same0.4.js';
-    // Best 6 hard under 0.4: pores, tones, tores, tarns, tiles, toles
-    import sameHardPoresTree from './data/pores.tree.hard.same0.4.js';
-    import sameHardTonesTree from './data/tones.tree.hard.same0.4.js';
-    import sameHardToresTree from './data/tores.tree.hard.same0.4.js';
-    import sameHardTarnsTree from './data/tarns.tree.hard.same0.4.js';
-    import sameHardTilesTree from './data/tiles.tree.hard.same0.4.js';
-    import sameHardTolesTree from './data/toles.tree.hard.same0.4.js';
+    // Sea of Greens — JOINT KNEE RATIO 0.35 for both normal and hard
+    // Best 6 normal under 0.35: pores, palet, moles, mores, poles, pones
+    import samePoresTree from './data/pores.tree.same0.35.js';
+    import samePaletTree from './data/palet.tree.same0.35.js';
+    import sameMolesTree from './data/moles.tree.same0.35.js';
+    import sameMoresTree from './data/mores.tree.same0.35.js';
+    import samePolesTree from './data/poles.tree.same0.35.js';
+    import samePonesTree from './data/pones.tree.same0.35.js';
+    // Best 6 hard under 0.35: palet, pores, tones, tiles, tarns, toles
+    import sameHardPaletTree from './data/palet.tree.hard.same0.35.js';
+    import sameHardPoresTree from './data/pores.tree.hard.same0.35.js';
+    import sameHardTonesTree from './data/tones.tree.hard.same0.35.js';
+    import sameHardTilesTree from './data/tiles.tree.hard.same0.35.js';
+    import sameHardTarnsTree from './data/tarns.tree.hard.same0.35.js';
+    import sameHardTolesTree from './data/toles.tree.hard.same0.35.js';
     import targetWords from './data/targetWords.js';
 
     const fontFamily = "'Clear Sans', 'Helvetica Neue', Arial, sans-serif";
@@ -453,22 +453,22 @@
               children: [
                 new scenery.Text( 'Sea of Greens', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
                 createTreeButton( samePoresTree, 'PORES' ),
-                createTreeButton( samePolesTree, 'POLES' ),
+                createTreeButton( samePaletTree, 'PALET' ),
                 createTreeButton( sameMolesTree, 'MOLES' ),
                 createTreeButton( sameMoresTree, 'MORES' ),
-                createTreeButton( samePonesTree, 'PONES' ),
-                createTreeButton( sameToresTree, 'TORES' )
+                createTreeButton( samePolesTree, 'POLES' ),
+                createTreeButton( samePonesTree, 'PONES' )
               ]
             } ),
             new scenery.FlowBox( {
               orientation: 'vertical',
               children: [
                 new scenery.Text( 'Sea of Greens Hard', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
+                createTreeButton( sameHardPaletTree, 'PALET (Hard)' ),
                 createTreeButton( sameHardPoresTree, 'PORES (Hard)' ),
                 createTreeButton( sameHardTonesTree, 'TONES (Hard)' ),
-                createTreeButton( sameHardToresTree, 'TORES (Hard)' ),
-                createTreeButton( sameHardTarnsTree, 'TARNS (Hard)' ),
                 createTreeButton( sameHardTilesTree, 'TILES (Hard)' ),
+                createTreeButton( sameHardTarnsTree, 'TARNS (Hard)' ),
                 createTreeButton( sameHardTolesTree, 'TOLES (Hard)' )
               ]
             } ),

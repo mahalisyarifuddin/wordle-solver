@@ -125,7 +125,7 @@ export const newSeenState = () => ( {
 // Knee-point tuned weights - SAME RATIO for normal and hard (user request)
 // First tuning: normal 0.35, hard 0.55. Second tuning: same ratio 0.4 for both (overlapping knee region)
 // Pareto analysis: normal knee avg 0.29 (best 0.4), hard avg 0.43 (best 0.6) → compromise 0.4
-export const KNEE_WEIGHT_SAME = 0.4;
+export const KNEE_WEIGHT_SAME = 0.35;
 export const KNEE_WEIGHT_NORMAL = KNEE_WEIGHT_SAME;
 export const KNEE_WEIGHT_HARD = KNEE_WEIGHT_SAME;
 export const getKneeWeight = mode => KNEE_WEIGHT_SAME;
