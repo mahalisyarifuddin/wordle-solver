@@ -60,21 +60,21 @@
     import hardLeantTree from './data/leant.tree.hard.js';
     import hardTrineTree from './data/trine.tree.hard.js';
     import hardPrateTree from './data/prate.tree.hard.js';
-    // Sea of Greens — KNEE_WEIGHT_SAME = 0.30 for both normal and hard
-    // Best 6 normal under 0.30: pores, mores, poles, moles, toles, palet
-    import samePoresTree from './data/pores.tree.same0.3.js';
-    import sameMoresTree from './data/mores.tree.same0.3.js';
-    import samePolesTree from './data/poles.tree.same0.3.js';
-    import sameMolesTree from './data/moles.tree.same0.3.js';
-    import sameTolesTree from './data/toles.tree.same0.3.js';
-    import samePaletTree from './data/palet.tree.same0.3.js';
-    // Best 6 hard under 0.30: palet, pores, tones, tarns, tiles, tores
-    import sameHardPaletTree from './data/palet.tree.hard.same0.3.js';
-    import sameHardPoresTree from './data/pores.tree.hard.same0.3.js';
-    import sameHardTonesTree from './data/tones.tree.hard.same0.3.js';
-    import sameHardTarnsTree from './data/tarns.tree.hard.same0.3.js';
-    import sameHardTilesTree from './data/tiles.tree.hard.same0.3.js';
-    import sameHardToresTree from './data/tores.tree.hard.same0.3.js';
+    // Sea of Greens — UNIFIED LAMBDA-CAPPED JOINT KNEE (gamma = 0.35, lambda = 1.0)
+    // Best 6 normal under L_capped: palet, poles, moles, pores, mores, toles
+    import cappedPaletTree from './data/palet.tree.capped.js';
+    import cappedPolesTree from './data/poles.tree.capped.js';
+    import cappedMolesTree from './data/moles.tree.capped.js';
+    import cappedPoresTree from './data/pores.tree.capped.js';
+    import cappedMoresTree from './data/mores.tree.capped.js';
+    import cappedTolesTree from './data/toles.tree.capped.js';
+    // Best 6 hard under L_capped: palet, cramp, pores, trape, prate, peart
+    import cappedHardPaletTree from './data/palet.tree.hard.capped.js';
+    import cappedHardCrampTree from './data/cramp.tree.hard.capped.js';
+    import cappedHardPoresTree from './data/pores.tree.hard.capped.js';
+    import cappedHardTrapeTree from './data/trape.tree.hard.capped.js';
+    import cappedHardPrateTree from './data/prate.tree.hard.capped.js';
+    import cappedHardPeartTree from './data/peart.tree.hard.capped.js';
     import targetWords from './data/targetWords.js';
 
     const fontFamily = "'Clear Sans', 'Helvetica Neue', Arial, sans-serif";
@@ -451,25 +451,25 @@
             new scenery.FlowBox( {
               orientation: 'vertical',
               children: [
-                new scenery.Text( 'Sea of Greens (0.30)', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
-                createTreeButton( samePoresTree, 'PORES' ),
-                createTreeButton( sameMoresTree, 'MORES' ),
-                createTreeButton( samePolesTree, 'POLES' ),
-                createTreeButton( sameMolesTree, 'MOLES' ),
-                createTreeButton( sameTolesTree, 'TOLES' ),
-                createTreeButton( samePaletTree, 'PALET' )
+                new scenery.Text( 'SoG Capped Knee', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
+                createTreeButton( cappedPaletTree, 'PALET' ),
+                createTreeButton( cappedPolesTree, 'POLES' ),
+                createTreeButton( cappedMolesTree, 'MOLES' ),
+                createTreeButton( cappedPoresTree, 'PORES' ),
+                createTreeButton( cappedMoresTree, 'MORES' ),
+                createTreeButton( cappedTolesTree, 'TOLES' )
               ]
             } ),
             new scenery.FlowBox( {
               orientation: 'vertical',
               children: [
-                new scenery.Text( 'Sea of Greens Hard (0.30)', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
-                createTreeButton( sameHardPaletTree, 'PALET (Hard)' ),
-                createTreeButton( sameHardPoresTree, 'PORES (Hard)' ),
-                createTreeButton( sameHardTonesTree, 'TONES (Hard)' ),
-                createTreeButton( sameHardTarnsTree, 'TARNS (Hard)' ),
-                createTreeButton( sameHardTilesTree, 'TILES (Hard)' ),
-                createTreeButton( sameHardToresTree, 'TORES (Hard)' )
+                new scenery.Text( 'SoG Capped Knee Hard', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
+                createTreeButton( cappedHardPaletTree, 'PALET (Hard)' ),
+                createTreeButton( cappedHardCrampTree, 'CRAMP (Hard)' ),
+                createTreeButton( cappedHardPoresTree, 'PORES (Hard)' ),
+                createTreeButton( cappedHardTrapeTree, 'TRAPE (Hard)' ),
+                createTreeButton( cappedHardPrateTree, 'PRATE (Hard)' ),
+                createTreeButton( cappedHardPeartTree, 'PEART (Hard)' )
               ]
             } ),
           ]
