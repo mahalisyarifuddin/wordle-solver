@@ -2,6 +2,17 @@ import guessWords from './guessWords.js';
 import targetWords from './targetWords.js';
 import { IS_HARD_MODE, isHardModeValidOptimized, getHardModeConstraints, perfectScore, score, getYellows, fastToScoreString, fastDecodeYellows, yellowsArray } from './wordleCore.js';
 import partition, { getSharedScores, targetWordIndexMap, guessWordIndexMap } from './partition.js';
+import { getFrequencyWeights } from './wordFrequencies.js';
+
+let targetWeights = null;
+export const setTargetWeights = w => {
+  if ( typeof w === 'string' ) {
+    targetWeights = getFrequencyWeights( w );
+  } else {
+    targetWeights = w;
+  }
+};
+export const getTargetWeights = () => targetWeights;
 
 class ComputationNode {
   constructor( words, guesses, possibleGuesses, skip = false, heuristic = new Heuristic() ) {
@@ -195,8 +206,17 @@ class ComputationNode {
           if ( c > best ) best = c;
           totalY += yellowsArray[ s ] * c;
         }
+        const hasWeights = targetWeights !== null && targetWeights !== undefined;
         if ( count === 1 && wlen > 1 ) size = 1e6;
-        else {
+        else if ( hasWeights ) {
+          const isTarget = this._wset.has( guess );
+          const guessIdx = targetWordIndexMap.get( guess );
+          const guessW = ( isTarget && guessIdx !== undefined ) ? targetWeights[ guessIdx ] : 0;
+          size = heuristic.averageWeight * ( wlen - ( isTarget ? 1 : 0 ) ) / count +
+            heuristic.bestWeight * best +
+            heuristic.yellowWeight * totalY / wlen;
+          if ( isTarget ) size -= ( 10 + 50 * guessW * wlen );
+        } else {
           const isTarget = this._wset.has( guess );
           size = heuristic.averageWeight * ( wlen - ( isTarget ? 1 : 0 ) ) / count +
             heuristic.bestWeight * best +
@@ -397,18 +417,45 @@ class Heuristic {
     this.nextWeight = nextWeight;
     this.yellowWeight = yellowWeight;
   }
-  static score( words, guess, map, heuristic, skipNext ) {
+  static score( words, guess, map, heuristic, skipNext, weights = targetWeights ) {
     let count = 0;
     let best = 0;
     let totalYellows = 0;
+    const hasWeights = weights !== null && weights !== undefined;
+    let totalWeight = 0;
+    let maxBucketWeight = 0;
+
     for ( const rawScore in map ) {
-      const length = map[ rawScore ].length;
+      const list = map[ rawScore ];
+      const length = list.length;
       best = Math.max( best, length );
       count++;
       totalYellows += yellowsArray[ rawScore ] * length;
+
+      if ( hasWeights ) {
+        let bw = 0;
+        for ( let i = 0; i < length; i++ ) {
+          const tidx = targetWordIndexMap.get( list[ i ] );
+          if ( tidx !== undefined ) bw += weights[ tidx ];
+        }
+        if ( bw > maxBucketWeight ) maxBucketWeight = bw;
+        totalWeight += bw;
+      }
     }
     if ( count === 1 && words.length > 1 ) return 1e6;
     const isTarget = words.includes( guess );
+
+    if ( hasWeights && totalWeight > 0 ) {
+      const guessIdx = targetWordIndexMap.get( guess );
+      const guessWeight = ( isTarget && guessIdx !== undefined ) ? weights[ guessIdx ] : 0;
+      const pTarget = guessWeight / totalWeight;
+      let size = heuristic.averageWeight * ( totalWeight - guessWeight ) / count +
+        heuristic.bestWeight * maxBucketWeight * words.length +
+        heuristic.yellowWeight * totalYellows / words.length;
+      if ( isTarget ) size -= ( 10 + 50 * pTarget );
+      return size;
+    }
+
     let size = heuristic.averageWeight * ( words.length - ( isTarget ? 1 : 0 ) ) / count + heuristic.bestWeight * best + heuristic.yellowWeight * totalYellows / words.length;
     if ( isTarget ) size -= 10;
     return size;
