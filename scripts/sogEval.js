@@ -6,15 +6,18 @@ import fs from 'fs';
 import targetWords from '../data/targetWords.js';
 import guessWords from '../server/guessWords.js';
 import { fastScore, getYellows } from '../server/wordleCore.js';
+import { getFrequencyWeights, WORDLE_ANSWERS_SET } from '../data/wordFrequencies.js';
 
 const TARGETS = targetWords;
 const TARGET_SET = new Set( TARGETS );
 const GUESS_SET = new Set( guessWords );
+const targetIndexMap = new Map( TARGETS.map( ( w, i ) => [ w, i ] ) );
 
-// returns { counts, yellows, leaves, depth, maxCounts } for a tree, walking recursively
+// returns { counts, yellows, leaves, depth, wordStats } for a tree, walking recursively
 const evalTree = ( tree, words, guessCount = 1, yellowsAccum = 0 ) => {
   const counts = [];
   const yellowsByDepth = {};
+  const wordStats = new Map(); // word -> { depth, yellows }
   let leaves = 0;
   let maxDepth = 0;
 
@@ -30,6 +33,7 @@ const evalTree = ( tree, words, guessCount = 1, yellowsAccum = 0 ) => {
         leaves++;
         counts[ guessCount ] = ( counts[ guessCount ] || 0 ) + 1;
         yellowsByDepth[ guessCount ] = ( yellowsByDepth[ guessCount ] || 0 ) + yellowsAccum;
+        wordStats.set( node.guess, { depth: guessCount, yellows: yellowsAccum } );
         if ( typeof child !== 'string' || !TARGET_SET.has( child ) ) {
           throw new Error( `22222 branch must be a target word leaf (guess=${node.guess})` );
         }
@@ -38,7 +42,9 @@ const evalTree = ( tree, words, guessCount = 1, yellowsAccum = 0 ) => {
         // leaf word: guessed next, solved
         leaves++;
         counts[ guessCount + 1 ] = ( counts[ guessCount + 1 ] || 0 ) + 1;
-        yellowsByDepth[ guessCount + 1 ] = ( yellowsByDepth[ guessCount + 1 ] || 0 ) + yellowsAccum + getYellows( score );
+        const totalY = yellowsAccum + getYellows( score );
+        yellowsByDepth[ guessCount + 1 ] = ( yellowsByDepth[ guessCount + 1 ] || 0 ) + totalY;
+        wordStats.set( child, { depth: guessCount + 1, yellows: totalY } );
         if ( !TARGET_SET.has( child ) ) {
           throw new Error( `Leaf '${child}' is not a target word (path guess=${node.guess} score=${score})` );
         }
@@ -48,7 +54,7 @@ const evalTree = ( tree, words, guessCount = 1, yellowsAccum = 0 ) => {
       }
     }
   }
-  return { counts, yellows: Object.values( yellowsByDepth ).reduce( ( a, b ) => a + b, 0 ), leaves, maxDepth };
+  return { counts, yellows: Object.values( yellowsByDepth ).reduce( ( a, b ) => a + b, 0 ), leaves, maxDepth, wordStats };
 };
 
 // Validate edge scores against the dictionary: recompute words per node from parent partition
@@ -95,28 +101,28 @@ const collectLeaves = tree => {
   return out;
 };
 
-const evaluate = ( tree ) => {
-  const { counts, yellows, leaves, maxDepth } = evalTree( tree, TARGETS );
+export const evaluateWeighted = ( tree, weights = null ) => {
+  const { counts, yellows, leaves, maxDepth, wordStats } = evalTree( tree, TARGETS );
   const total = counts.reduce( ( a, b ) => a + b, 0 );
   if ( leaves !== TARGETS.length || total !== TARGETS.length ) {
     throw new Error( `Leaf count ${leaves}/${total} != ${TARGETS.length}` );
   }
+
+  // Uniform evaluation
   let guessSum = 0;
   for ( let i = 0; i < counts.length; i++ ) guessSum += ( counts[ i ] || 0 ) * i;
   const avgGuesses = guessSum / TARGETS.length;
   const avgYellows = yellows / TARGETS.length;
 
-  // cross-check stored ranking
+  // Stored ranking cross-check
   const stored = tree.ranking;
   let storedSum = 0;
   for ( let i = 0; i < stored.counts.length; i++ ) storedSum += ( stored.counts[ i ] || 0 ) * ( i + 1 );
   const storedAvg = storedSum / TARGETS.length;
   const storedYellows = stored.yellows;
 
-  // compare stored counts (offset by 1) to recomputed
   let rankOk = true;
   if ( stored.counts.length !== counts.length - 1 ) {
-    // stored counts length may differ; compare aggregate
     rankOk = Math.abs( storedAvg - avgGuesses ) < 1e-9 && Math.abs( storedYellows - yellows ) < 1e-9;
   }
   else {
@@ -125,29 +131,88 @@ const evaluate = ( tree ) => {
     }
     rankOk = rankOk && Math.abs( storedYellows - yellows ) < 1e-9;
   }
+
+  // Frequency-weighted evaluation
+  let wExpG = 0;
+  let wExpY = 0;
+  let wPenalty = 0;
+  let wWinRate = 0;
+  let answersExpG = 0;
+  let answersCount = 0;
+
+  const wArray = weights || getFrequencyWeights( 'uniform' );
+  for ( let i = 0; i < TARGETS.length; i++ ) {
+    const word = TARGETS[ i ];
+    const stat = wordStats.get( word );
+    if ( !stat ) continue;
+    const w = wArray[ i ];
+    wExpG += w * stat.depth;
+    wExpY += w * stat.yellows;
+    if ( stat.depth > 6 ) {
+      wPenalty += w * Math.pow( stat.depth - 6, 2 );
+    } else {
+      wWinRate += w;
+    }
+
+    if ( WORDLE_ANSWERS_SET.has( word ) ) {
+      answersExpG += stat.depth;
+      answersCount++;
+    }
+  }
+
+  const avgGuessesWordleAnswers = answersCount > 0 ? answersExpG / answersCount : 0;
+  const cappedScore = wExpG + 0.35 * wExpY + 1.0 * wPenalty;
+
   return {
     avgGuesses, avgYellows, oneToOne: avgGuesses + avgYellows,
     leaves, maxDepth, counts: counts.slice( 1 ),
-    yellows, storedAvg, storedYellows, rankOk
+    yellows, storedAvg, storedYellows, rankOk,
+    weighted: {
+      expGuesses: wExpG,
+      expYellows: wExpY,
+      expOneToOne: wExpG + wExpY,
+      penalty: wPenalty,
+      cappedScore: cappedScore,
+      winRateWithin6: wWinRate,
+      avgGuessesWordleAnswers
+    }
   };
 };
 
+export const evaluate = tree => evaluateWeighted( tree, null );
+
 const loadTree = name => {
-  const s = fs.readFileSync( `data/${name}.js`, 'utf8' );
+  const filePath = name.endsWith('.js') ? name : `data/${name}.js`;
+  const s = fs.readFileSync( filePath, 'utf8' );
   return JSON.parse( s.slice( s.indexOf( '{' ) ) );
 };
 
 const main = () => {
-  const names = process.argv.slice( 2 );
+  const args = process.argv.slice( 2 );
+  let freqModel = 'uniform';
+  const names = [];
+
+  for ( const arg of args ) {
+    if ( arg.startsWith( '--freq=' ) ) {
+      freqModel = arg.slice( 7 );
+    } else {
+      names.push( arg );
+    }
+  }
+
+  const weights = getFrequencyWeights( freqModel );
+
   for ( const name of names ) {
     try {
       const tree = loadTree( name );
-      const r = evaluate( tree );
+      const r = evaluateWeighted( tree, weights );
       const v = validateScores( tree, TARGETS );
       const leaves = collectLeaves( tree );
       const unique = new Set( leaves );
       console.log( `\n${name}: starter='${tree.guess}'  depth=${r.maxDepth}  leaves=${r.leaves} (unique=${unique.size})` );
-      console.log( `  avgGuesses=${r.avgGuesses.toFixed( 4 )}  avgYellows=${r.avgYellows.toFixed( 4 )}  1:1=${r.oneToOne.toFixed( 4 )}` );
+      console.log( `  [Uniform]  avgGuesses=${r.avgGuesses.toFixed( 4 )}  avgYellows=${r.avgYellows.toFixed( 4 )}  1:1=${r.oneToOne.toFixed( 4 )}` );
+      console.log( `  [Weighted (${freqModel})] E[guesses]=${r.weighted.expGuesses.toFixed( 4 )}  E[yellows]=${r.weighted.expYellows.toFixed( 4 )}  L_capped=${r.weighted.cappedScore.toFixed( 4 )}  WinRate<=6=${( r.weighted.winRateWithin6 * 100 ).toFixed( 2 )}%` );
+      console.log( `  [NYT Answers (2315)] avgGuesses=${r.weighted.avgGuessesWordleAnswers.toFixed( 4 )}` );
       console.log( `  counts=${JSON.stringify( r.counts )}  rankOk=${r.rankOk}  scoreEdgesOk=${v.nodes} nodes / ${v.edges} edges verified` );
     }
     catch ( e ) {
@@ -156,4 +221,7 @@ const main = () => {
   }
 };
 
-main();
+if ( process.argv[ 1 ] && ( process.argv[ 1 ].endsWith( 'sogEval.js' ) || process.argv[ 1 ].includes( 'sogEval' ) ) ) {
+  main();
+}
+

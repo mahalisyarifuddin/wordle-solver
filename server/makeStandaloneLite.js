@@ -12,44 +12,44 @@ const readTree = name => {
 // [file, varName, label]
 const GROUPS = [
   { title: 'Fastest Average', items: [
-    [ 'salet.tree.total', 'T_TOTAL_SALET', 'SALET' ],
-    [ 'palet.tree.total', 'T_TOTAL_PALET', 'PALET' ],
-    [ 'rants.tree.total', 'T_TOTAL_RANTS', 'RANTS' ],
-    [ 'manet.tree.total', 'T_TOTAL_MANET', 'MANET' ],
     [ 'slate.tree.total', 'T_TOTAL_SLATE', 'SLATE' ],
-    [ 'morne.tree.total', 'T_TOTAL_MORNE', 'MORNE' ]
+    [ 'trace.tree.total', 'T_TOTAL_TRACE', 'TRACE' ],
+    [ 'salet.tree.total', 'T_TOTAL_SALET', 'SALET' ],
+    [ 'reast.tree.total', 'T_TOTAL_REAST', 'REAST' ],
+    [ 'crane.tree.total', 'T_TOTAL_CRANE', 'CRANE' ],
+    [ 'least.tree.total', 'T_TOTAL_LEAST', 'LEAST' ]
   ] },
   { title: 'Fewest', items: [
-    [ 'rated.tree', 'T_MIN_RATED', 'RATED' ],
-    [ 'ranid.tree', 'T_MIN_RANID', 'RANID' ],
-    [ 'rants.tree', 'T_MIN_RANTS', 'RANTS' ],
-    [ 'saner.tree', 'T_MIN_SANER', 'SANER' ],
-    [ 'manet.tree', 'T_MIN_MANET', 'MANET' ],
-    [ 'lanes.tree', 'T_MIN_LANES', 'LANES' ]
+    [ 'slate.tree', 'T_MIN_SLATE', 'SLATE' ],
+    [ 'salet.tree', 'T_MIN_SALET', 'SALET' ],
+    [ 'trace.tree', 'T_MIN_TRACE', 'TRACE' ],
+    [ 'crane.tree', 'T_MIN_CRANE', 'CRANE' ],
+    [ 'least.tree', 'T_MIN_LEAST', 'LEAST' ],
+    [ 'stare.tree', 'T_MIN_STARE', 'STARE' ]
   ] },
   { title: 'Hard Mode', items: [
-    [ 'palet.tree.hard', 'T_HARD_PALET', 'PALET' ],
-    [ 'peart.tree.hard', 'T_HARD_PEART', 'PEART' ],
-    [ 'trape.tree.hard', 'T_HARD_TRAPE', 'TRAPE' ],
-    [ 'leant.tree.hard', 'T_HARD_LEANT', 'LEANT' ],
-    [ 'trine.tree.hard', 'T_HARD_TRINE', 'TRINE' ],
-    [ 'prate.tree.hard', 'T_HARD_PRATE', 'PRATE' ]
+    [ 'trace.tree.hard', 'T_HARD_TRACE', 'TRACE' ],
+    [ 'slate.tree.hard', 'T_HARD_SLATE', 'SLATE' ],
+    [ 'least.tree.hard', 'T_HARD_LEAST', 'LEAST' ],
+    [ 'salet.tree.hard', 'T_HARD_SALET', 'SALET' ],
+    [ 'reast.tree.hard', 'T_HARD_REAST', 'REAST' ],
+    [ 'crane.tree.hard', 'T_HARD_CRANE', 'CRANE' ]
   ] },
   { title: 'SoG Capped Knee', items: [
-    [ 'palet.tree.capped', 'T_CAPPED_PALET', 'PALET' ],
-    [ 'poles.tree.capped', 'T_CAPPED_POLES', 'POLES' ],
-    [ 'moles.tree.capped', 'T_CAPPED_MOLES', 'MOLES' ],
-    [ 'pores.tree.capped', 'T_CAPPED_PORES', 'PORES' ],
-    [ 'mores.tree.capped', 'T_CAPPED_MORES', 'MORES' ],
-    [ 'toles.tree.capped', 'T_CAPPED_TOLES', 'TOLES' ]
+    [ 'slane.tree.capped', 'T_CAPPED_SLANE', 'SLANE' ],
+    [ 'slate.tree.capped', 'T_CAPPED_SLATE', 'SLATE' ],
+    [ 'saice.tree.capped', 'T_CAPPED_SAICE', 'SAICE' ],
+    [ 'saine.tree.capped', 'T_CAPPED_SAINE', 'SAINE' ],
+    [ 'salet.tree.capped', 'T_CAPPED_SALET', 'SALET' ],
+    [ 'soare.tree.capped', 'T_CAPPED_SOARE', 'SOARE' ]
   ] },
   { title: 'SoG Capped Knee Hard', items: [
-    [ 'palet.tree.hard.capped', 'T_CAPPED_PALET_HARD', 'PALET (HARD)' ],
-    [ 'cramp.tree.hard.capped', 'T_CAPPED_CRAMP_HARD', 'CRAMP (HARD)' ],
-    [ 'pores.tree.hard.capped', 'T_CAPPED_PORES_HARD', 'PORES (HARD)' ],
-    [ 'trape.tree.hard.capped', 'T_CAPPED_TRAPE_HARD', 'TRAPE (HARD)' ],
-    [ 'prate.tree.hard.capped', 'T_CAPPED_PRATE_HARD', 'PRATE (HARD)' ],
-    [ 'peart.tree.hard.capped', 'T_CAPPED_PEART_HARD', 'PEART (HARD)' ]
+    [ 'slane.tree.hard.capped', 'T_CAPPED_SLANE_HARD', 'SLANE (HARD)' ],
+    [ 'slate.tree.hard.capped', 'T_CAPPED_SLATE_HARD', 'SLATE (HARD)' ],
+    [ 'saice.tree.hard.capped', 'T_CAPPED_SAICE_HARD', 'SAICE (HARD)' ],
+    [ 'saine.tree.hard.capped', 'T_CAPPED_SAINE_HARD', 'SAINE (HARD)' ],
+    [ 'salet.tree.hard.capped', 'T_CAPPED_SALET_HARD', 'SALET (HARD)' ],
+    [ 'soare.tree.hard.capped', 'T_CAPPED_SOARE_HARD', 'SOARE (HARD)' ]
   ] }
 ];
 
@@ -79,8 +79,8 @@ const championBest = files => {
   }
   return best;
 };
-const championNormal = championBest( [ 'palet.tree.capped', 'poles.tree.capped', 'moles.tree.capped', 'pores.tree.capped', 'mores.tree.capped', 'toles.tree.capped' ] );
-const championHard = championBest( [ 'palet.tree.hard.capped', 'cramp.tree.hard.capped', 'pores.tree.hard.capped', 'trape.tree.hard.capped', 'prate.tree.hard.capped', 'peart.tree.hard.capped' ] );
+const championNormal = championBest( [ 'slane.tree.capped', 'slate.tree.capped', 'saice.tree.capped', 'saine.tree.capped', 'salet.tree.capped', 'soare.tree.capped' ] );
+const championHard = championBest( [ 'slane.tree.hard.capped', 'slate.tree.hard.capped', 'saice.tree.hard.capped', 'saine.tree.hard.capped', 'salet.tree.hard.capped', 'soare.tree.hard.capped' ] );
 const championLabel = file => ( GROUPS.find( g => g.title === 'SoG Capped Knee' ).items.find( i => i[ 0 ] === file ) || [] )[ 2 ] || file;
 const championNormalLabel = championLabel( championNormal.file );
 const championHardLabel = championLabel( championHard.file );

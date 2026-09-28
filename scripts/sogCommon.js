@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url';
 import targetWords from '../data/targetWords.js';
 import guessWords from '../server/guessWords.js';
 import { fastScore, yellowsArray, isHardModeValidOptimized, getHardModeConstraints } from '../server/wordleCore.js';
+import { getFrequencyWeights } from '../data/wordFrequencies.js';
 
 export const NT = targetWords.length;           // full dictionary (14,855) after full-dictionary integration
 export const NG = guessWords.length;            // 14855 = full tabatkins/wordle-list dictionary
@@ -23,6 +24,17 @@ export const t2g = new Int32Array( NT );
   const map = new Map( guessWords.map( ( w, i ) => [ w, i ] ) );
   for ( let i = 0; i < NT; i++ ) t2g[ i ] = map.get( targetWords[ i ] );
 }
+
+// Global target weights (Float64Array of length NT, sum === 1.0, or null for uniform)
+export let targetWeights = null;
+export const setTargetWeights = w => {
+  if ( typeof w === 'string' ) {
+    targetWeights = getFrequencyWeights( w );
+  } else {
+    targetWeights = w;
+  }
+};
+export const getTargetWeights = () => targetWeights;
 
 // Disk-cached score matrix. The cache lives in computed/ (gitignored) so the
 // many stages of a recompute (scans, tree builds, recalc) share one build.
@@ -59,31 +71,52 @@ export const buildMatrix = ( buffer = null ) => {
 };
 
 // Static quality of every guess: expected squared bucket size vs all targets, avg yellows, entropy
-export const buildStaticOrder = matrix => {
+export const buildStaticOrder = ( matrix, weights = targetWeights ) => {
   const expSq = new Float64Array( NG );
   const avgY = new Float64Array( NG );
   const ent = new Float64Array( NG );
-  const cnt = new Int32Array( 243 );
+  const hasWeights = weights !== null && weights !== undefined;
+
   for ( let g = 0; g < NG; g++ ) {
     const base = g * NT;
-    cnt.fill( 0 );
     let y = 0;
-    for ( let t = 0; t < NT; t++ ) {
-      const s = matrix[ base + t ];
-      cnt[ s ]++;
-      y += yellowsArray[ s ];
+    if ( hasWeights ) {
+      const cnt = new Float64Array( 243 );
+      for ( let t = 0; t < NT; t++ ) {
+        const s = matrix[ base + t ];
+        const w = weights[ t ];
+        cnt[ s ] += w;
+        y += yellowsArray[ s ] * w;
+      }
+      let sq = 0, e = 0;
+      for ( let s = 0; s < 243; s++ ) {
+        const p = cnt[ s ];
+        if ( p <= 0 ) continue;
+        sq += p * p;
+        e -= p * Math.log2( p );
+      }
+      expSq[ g ] = sq;
+      avgY[ g ] = y;
+      ent[ g ] = e;
+    } else {
+      const cnt = new Int32Array( 243 );
+      for ( let t = 0; t < NT; t++ ) {
+        const s = matrix[ base + t ];
+        cnt[ s ]++;
+        y += yellowsArray[ s ];
+      }
+      let sq = 0, e = 0;
+      for ( let s = 0; s < 243; s++ ) {
+        const c = cnt[ s ];
+        if ( !c ) continue;
+        sq += c * c;
+        const p = c / NT;
+        e -= p * Math.log2( p );
+      }
+      expSq[ g ] = sq / NT;
+      avgY[ g ] = y / NT;
+      ent[ g ] = e;
     }
-    let sq = 0, e = 0;
-    for ( let s = 0; s < 243; s++ ) {
-      const c = cnt[ s ];
-      if ( !c ) continue;
-      sq += c * c;
-      const p = c / NT;
-      e -= p * Math.log2( p );
-    }
-    expSq[ g ] = sq / NT;
-    avgY[ g ] = y / NT;
-    ent[ g ] = e;
   }
   const order = [ ...Array( NG ).keys() ];
   order.sort( ( a, b ) => expSq[ a ] - expSq[ b ] || avgY[ a ] - avgY[ b ] || ent[ b ] - ent[ a ] );
@@ -117,8 +150,10 @@ export const newSeenState = () => ( {
   cnt: new Int32Array( 243 ),
   bucketBase: new Int32Array( 243 ),
   bucketLen: new Int32Array( 243 ),
+  bucketWeight: new Float64Array( 243 ),
   flat: new Int32Array( NT ),
   cnt2: new Int32Array( 243 ),
+  wcnt2: new Float64Array( 243 ),
   touched: new Int32Array( 243 )
 } );
 
@@ -135,21 +170,30 @@ export const getKneeWeight = mode => KNEE_WEIGHT_SAME;
 // mode: 'normal' | 'hard'. candK: candidate budget (number or 'full').
 // st: optional per-worker scratch state from newSeenState().
 // yw: yellow weight; if null, uses knee-tuned default per mode.
-export const evalStarter = ( g, matrix, calib, mode, candK = 600, st = null, yw = null ) => {
+export const evalStarter = ( g, matrix, calib, mode, candK = 600, st = null, yw = null, weights = targetWeights ) => {
   if ( yw === null || yw === undefined ) yw = getKneeWeight( mode );
   const est = calib[ mode ];
   if ( !st ) st = newSeenState();
   const seenGen = st.arr;
   const cnt = st.cnt;
   const cnt2 = st.cnt2;
+  const wcnt2 = st.wcnt2;
   const touched = st.touched;
   const bucketBase = st.bucketBase;
   const bucketLen = st.bucketLen;
+  const bucketWeight = st.bucketWeight;
   const flat = st.flat;
   const baseG = g * NT;
+  const hasWeights = weights !== null && weights !== undefined;
+
   // flat bucket storage for this starter: targets grouped by score
   cnt.fill( 0 );
-  for ( let t = 0; t < NT; t++ ) cnt[ matrix[ baseG + t ] ]++;
+  bucketWeight.fill( 0 );
+  for ( let t = 0; t < NT; t++ ) {
+    const s = matrix[ baseG + t ];
+    cnt[ s ]++;
+    if ( hasWeights ) bucketWeight[ s ] += weights[ t ];
+  }
   let off = 0;
   for ( let s = 0; s < 243; s++ ) {
     bucketBase[ s ] = off;
@@ -170,10 +214,12 @@ export const evalStarter = ( g, matrix, calib, mode, candK = 600, st = null, yw 
     const len = bucketLen[ s ];
     if ( !len ) continue;
     const base = bucketBase[ s ];
-    y1 += yellowsArray[ s ] * len;
+    const wMass = hasWeights ? bucketWeight[ s ] : len / NT;
+
+    y1 += yellowsArray[ s ] * ( hasWeights ? bucketWeight[ s ] : len );
     if ( s === 242 ) continue; // solved by starter (242 = '22222' in base-3 int encoding)
     if ( len === 1 ) {
-      E += 1 / NT; // leaf word remains: 1 more guess
+      E += wMass; // leaf word remains: 1 more guess
       continue;
     }
     let hardConstraint = null;
@@ -188,7 +234,7 @@ export const evalStarter = ( g, matrix, calib, mode, candK = 600, st = null, yw 
       const gi = t2g[ flat[ base + i ] ];
       if ( gi === g || seenGen[ gi ] === gen ) continue;
       seenGen[ gi ] = gen;
-      const r = evalCandidate( flat, base, len, gi, matrix, est, cnt2, touched, hardConstraint );
+      const r = evalCandidate( flat, base, len, gi, matrix, est, cnt2, touched, hardConstraint, weights, wcnt2 );
       const j = r.E + yw * r.Y;
       if ( j < bestJoint ) { bestJoint = j; bestE = r.E; bestY = r.Y; }
     }
@@ -197,15 +243,15 @@ export const evalStarter = ( g, matrix, calib, mode, candK = 600, st = null, yw 
       const gi = staticOrder[ k ];
       if ( gi === g || seenGen[ gi ] === gen ) continue;
       seenGen[ gi ] = gen;
-      const r = evalCandidate( flat, base, len, gi, matrix, est, cnt2, touched, hardConstraint );
+      const r = evalCandidate( flat, base, len, gi, matrix, est, cnt2, touched, hardConstraint, weights, wcnt2 );
       const j = r.E + yw * r.Y;
       if ( j < bestJoint ) { bestJoint = j; bestE = r.E; bestY = r.Y; }
     }
     if ( bestE === Infinity ) throw new Error( `no candidate for starter ${g} score ${s}` );
-    E += len * bestE / NT;
-    Y += len * bestY / NT;
+    E += wMass * bestE;
+    Y += wMass * bestY;
   }
-  Y += y1 / NT;
+  Y += ( hasWeights ? y1 : y1 / NT );
   return { e: E, y: Y, total: E + yw * Y };
 };
 
@@ -213,33 +259,70 @@ export const evalStarter = ( g, matrix, calib, mode, candK = 600, st = null, yw 
 // Uses a single pass over the bucket; cnt2/touched are scratch (touched holds
 // the score ids that were set, so only those are reset - no 243-wide fills).
 // hardConstraint: null or {fixed, minCounts} of the parent edge (hard mode).
-export const evalCandidate = ( flat, base, len, gi, matrix, est, cnt2, touched, hardConstraint ) => {
+export const evalCandidate = ( flat, base, len, gi, matrix, est, cnt2, touched, hardConstraint, weights = targetWeights, wcnt2 = null ) => {
   if ( hardConstraint && !isHardModeValidOptimized( GUESSES[ gi ], hardConstraint ) ) {
     return { E: Infinity, Y: Infinity, joint: Infinity };
   }
   const row = gi * NT;
   let nTouched = 0;
-  for ( let i = 0; i < len; i++ ) {
-    const s = matrix[ row + flat[ base + i ] ];
-    if ( cnt2[ s ] === 0 ) touched[ nTouched++ ] = s;
-    cnt2[ s ]++;
-  }
-  let E = 1, Y = 0;
-  for ( let k = 0; k < nTouched; k++ ) {
-    const s = touched[ k ];
-    const c = cnt2[ s ];
-    cnt2[ s ] = 0;
-    if ( s === 242 ) continue; // solved by this guess (242 = '22222' int)
-    Y += yellowsArray[ s ] * c / len;
-    if ( c === 1 ) {
-      E += 1 / len; // leaf word: one more guess
+  const hasWeights = weights !== null && weights !== undefined;
+
+  if ( hasWeights && wcnt2 ) {
+    let totalW = 0;
+    for ( let i = 0; i < len; i++ ) {
+      const t = flat[ base + i ];
+      const s = matrix[ row + t ];
+      const w = weights[ t ];
+      if ( cnt2[ s ] === 0 ) {
+        touched[ nTouched++ ] = s;
+        wcnt2[ s ] = 0;
+      }
+      cnt2[ s ]++;
+      wcnt2[ s ] += w;
+      totalW += w;
     }
-    else {
-      E += c * est.g[ c ] / len;
-      Y += c * est.y[ c ] / len;
+    let E = 1, Y = 0;
+    for ( let k = 0; k < nTouched; k++ ) {
+      const s = touched[ k ];
+      const c = cnt2[ s ];
+      const bw = wcnt2[ s ];
+      cnt2[ s ] = 0;
+      wcnt2[ s ] = 0;
+      if ( s === 242 ) continue; // solved by this guess
+      const pw = totalW > 0 ? bw / totalW : 1 / len;
+      Y += yellowsArray[ s ] * pw;
+      if ( c === 1 ) {
+        E += pw;
+      } else {
+        const estIdx = Math.min( c, est.g.length - 1 );
+        E += pw * est.g[ estIdx ];
+        Y += pw * est.y[ estIdx ];
+      }
     }
+    return { E, Y, joint: E + Y };
+  } else {
+    for ( let i = 0; i < len; i++ ) {
+      const s = matrix[ row + flat[ base + i ] ];
+      if ( cnt2[ s ] === 0 ) touched[ nTouched++ ] = s;
+      cnt2[ s ]++;
+    }
+    let E = 1, Y = 0;
+    for ( let k = 0; k < nTouched; k++ ) {
+      const s = touched[ k ];
+      const c = cnt2[ s ];
+      cnt2[ s ] = 0;
+      if ( s === 242 ) continue; // solved by this guess (242 = '22222' int)
+      Y += yellowsArray[ s ] * c / len;
+      if ( c === 1 ) {
+        E += 1 / len; // leaf word: one more guess
+      }
+      else {
+        E += c * est.g[ c ] / len;
+        Y += c * est.y[ c ] / len;
+      }
+    }
+    return { E, Y, joint: E + Y };
   }
-  return { E, Y, joint: E + Y };
 };
 
 export let staticOrder = null;
