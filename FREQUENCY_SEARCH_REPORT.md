@@ -1,5 +1,21 @@
 # Frequency-Weighted Wordle Solver: 5-Mode Starters & Retuned Pareto Knee
 
+> **Historical report:** The results below were generated with an earlier proxy that assigned equal weight to every official answer. Current solver priors use empirical per-word English frequencies bundled in `data/corpusWordFrequencies.js`; the tables below are not current performance measurements. Current app starter rankings and exact tree metrics are summarized next. Tree prefixes still use calibrated search, with exact native dynamic-programming refinement for small endgames; full-root global optimality is not certified. See `scripts/EXACT_ENDGAME_SEARCH.md` for details.
+
+## Current app starter selections
+
+The apps show these starters in ranked order, based on exact evaluation of the generated trees under the empirical `wordleAnswers` prior. `Fewest` is ordered by the worst-case turn-count metric.
+
+| Mode | Ranked starters |
+|---|---|
+| Fastest Average | `TORSE`, `TRONE`, `TRACE`, `TIARE`, `ROATE`, `TARSE` |
+| Fewest | `RANID`, `RANTS`, `MANET`, `SANER`, `RATED`, `LANES` |
+| Hard Mode | `TRACE`, `TRONE`, `TIARE`, `TORSE`, `TARSE`, `TORES` |
+| SoG Capped Knee | `TOISE`, `THALE`, `TRACE`, `TOILE`, `SOARE`, `TRONE` |
+| SoG Capped Knee Hard | `TRACE`, `TOILE`, `TOISE`, `TRONE`, `SOARE`, `TORSE` |
+
+Weighted objective scores for the six choices are respectively: expected turns; minimax depth; expected turns in hard mode; and `E[turns] + 0.45·E[yellows] + capped-tail penalty` for each SoG mode. Source data and reproduction steps are in `scripts/EXACT_ENDGAME_SEARCH.md` and `scripts/buildAllPreexistingModes.js`.
+
 **Date:** 2026-09-28  
 **Dictionary:** Full 14,855 five-letter words (`data/targetWords.js`).  
 **Priors:** Solution-weighted Wordle Answers ($\mathcal{W}_{\text{answers}} = 2,315$) with legal coverage over all 14,855 words.  

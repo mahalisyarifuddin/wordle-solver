@@ -1,14 +1,15 @@
-// Exact Frequency-Weighted Decision Tree Builder
-// Builds a decision tree optimized for a given prior word frequency distribution.
+// Frequency-weighted decision-tree builder with exhaustive legal-guess selection.
+// At each node, all legal guesses are scored; future branch values use calibrated
+// estimates, and rankings/leaf coverage are computed exactly from the resulting tree.
 import fs from 'fs';
 import targetWords from '../data/targetWords.js';
 import guessWords from '../server/guessWords.js';
-import { NT, NG, GUESSES, TARGETS, t2g, buildMatrix, buildStaticOrder, loadCalib, setStaticOrder, evalCandidate, setTargetWeights } from './sogCommon.js';
+import { NT, NG, GUESSES, TARGETS, t2g, buildMatrix, loadCalib, evalCandidate, setTargetWeights } from './sogCommon.js';
 import { getYellows, getHardModeConstraints, isHardModeValidOptimized } from '../server/wordleCore.js';
 import { getFrequencyWeights } from '../data/wordFrequencies.js';
 import { evaluateWeighted } from './sogEval.js';
 
-let matrix, calib, staticOrder, targetWeights;
+let matrix, calib, targetWeights;
 let YELLOW_WEIGHT = 0.35;
 
 const toScoreString = int => {
@@ -43,31 +44,12 @@ const rankCandidates = ( words, base, len, mode, constraint, topN ) => {
 
   const ibOnly = len <= 2;
   for ( let i = 0; i < len; i++ ) consider( t2g[ words[ base + i ] ] );
-  const topStatic = Math.min( 1500, NG );
-  for ( let k = 0; k < topStatic && !ibOnly; k++ ) consider( staticOrder[ k ] );
 
-  if ( len >= 12 && !ibOnly ) {
-    const cnt = new Float64Array( 243 );
-    const onePly = [];
-    for ( let gi = 0; gi < NG; gi++ ) {
-      if ( considered[ gi ] ) continue;
-      if ( mode === 'hard' && constraint && !isHardModeValidOptimized( GUESSES[ gi ], constraint ) ) continue;
-      cnt.fill( 0 );
-      let y = 0;
-      for ( let i = 0; i < len; i++ ) {
-        const t = words[ base + i ];
-        const s = matrix[ gi * NT + t ];
-        const w = targetWeights ? targetWeights[ t ] : 1;
-        cnt[ s ] += w;
-        y += YELLOWS_ARRAY[ s ] * w;
-      }
-      let sq = 0;
-      for ( let s = 0; s < 243; s++ ) if ( cnt[ s ] ) sq += cnt[ s ] * cnt[ s ];
-      onePly.push( [ gi, sq, y ] );
-    }
-    onePly.sort( ( a, b ) => a[ 1 ] - b[ 1 ] || a[ 2 ] - b[ 2 ] );
-    const top = mode === 'hard' ? 120 : 80;
-    for ( let i = 0; i < Math.min( top, onePly.length ); i++ ) consider( onePly[ i ][ 0 ] );
+  // Exhaustively evaluate all legal guesses at every nontrivial node. The
+  // continuation value inside evalCandidate remains calibrated, but no legal
+  // action is discarded by a static or one-ply shortlist before scoring.
+  if ( len > 2 ) {
+    for ( let gi = 0; gi < NG; gi++ ) consider( gi );
   }
 
   results.sort( ( a, b ) => a[ 3 ] - b[ 3 ] || a[ 1 ] - b[ 1 ] );
@@ -247,8 +229,6 @@ export const buildFrequencyTree = ( starter, mode = 'normal', freqModel = 'wordl
   matrix = new Uint8Array( buildMatrix() );
   targetWeights = getFrequencyWeights( freqModel );
   setTargetWeights( targetWeights );
-  staticOrder = buildStaticOrder( matrix, targetWeights ).order;
-  setStaticOrder( staticOrder );
 
   const raw = JSON.parse( fs.readFileSync( 'data/calib.json', 'utf8' ) );
   const mk = o => { const g = new Float64Array( o.g ); const y = new Float64Array( o.y ); g[ 1 ] = 1; y[ 1 ] = 0; return { g, y }; };
@@ -258,7 +238,7 @@ export const buildFrequencyTree = ( starter, mode = 'normal', freqModel = 'wordl
   };
 
   const t0 = Date.now();
-  console.log( `Building exact tree for '${starter}' (${mode}) under freq='${freqModel}'...` );
+  console.log( `Building frequency-weighted tree for '${starter}' (${mode}) under freq='${freqModel}'...` );
   const sub = buildRoot( starter, mode );
   const tree = { guess: starter, map: sub.map, ranking: sub.ranking, depth: sub.depth };
   const elapsed = ( ( Date.now() - t0 ) / 1000 ).toFixed( 1 );

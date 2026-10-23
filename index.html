@@ -42,41 +42,41 @@
     // import axon from '../chipper/dist/js/axon/js/main.js';
     // import phetCore from '../chipper/dist/js/phet-core/js/main.js';
 
-    import totalSlateTree from './data/slate.tree.total.js';
+    import totalTiareTree from './data/tiare.tree.total.js';
+    import totalTroneTree from './data/trone.tree.total.js';
     import totalTraceTree from './data/trace.tree.total.js';
-    import totalSaletTree from './data/salet.tree.total.js';
-    import totalReastTree from './data/reast.tree.total.js';
-    import totalCraneTree from './data/crane.tree.total.js';
-    import totalLeastTree from './data/least.tree.total.js';
+    import totalTorseTree from './data/torse.tree.total.js';
+    import totalTarseTree from './data/tarse.tree.total.js';
+    import totalRoateTree from './data/roate.tree.total.js';
 
-    import minSlateTree from './data/slate.tree.js';
-    import minSaletTree from './data/salet.tree.js';
-    import minTraceTree from './data/trace.tree.js';
-    import minCraneTree from './data/crane.tree.js';
-    import minLeastTree from './data/least.tree.js';
-    import minStareTree from './data/stare.tree.js';
+    import minRatedTree from './data/rated.tree.js';
+    import minRanidTree from './data/ranid.tree.js';
+    import minRantsTree from './data/rants.tree.js';
+    import minSanerTree from './data/saner.tree.js';
+    import minManetTree from './data/manet.tree.js';
+    import minLanesTree from './data/lanes.tree.js';
 
+    import hardTiareTree from './data/tiare.tree.hard.js';
+    import hardTroneTree from './data/trone.tree.hard.js';
     import hardTraceTree from './data/trace.tree.hard.js';
-    import hardSlateTree from './data/slate.tree.hard.js';
-    import hardLeastTree from './data/least.tree.hard.js';
-    import hardSaletTree from './data/salet.tree.hard.js';
-    import hardReastTree from './data/reast.tree.hard.js';
-    import hardCraneTree from './data/crane.tree.hard.js';
+    import hardTorseTree from './data/torse.tree.hard.js';
+    import hardToresTree from './data/tores.tree.hard.js';
+    import hardTarseTree from './data/tarse.tree.hard.js';
 
-    // Sea of Greens — RETUNED FREQUENCY-WEIGHTED CAPPED KNEE (gamma = 0.45, lambda = 1.0)
-    import cappedSlaneTree from './data/slane.tree.capped.js';
-    import cappedSlateTree from './data/slate.tree.capped.js';
-    import cappedSaiceTree from './data/saice.tree.capped.js';
-    import cappedSaineTree from './data/saine.tree.capped.js';
-    import cappedSaletTree from './data/salet.tree.capped.js';
+    // Corpus-weighted SoG capped knee (gamma = 0.45, lambda = 1.0).
+    import cappedToiseTree from './data/toise.tree.capped.js';
+    import cappedTraceTree from './data/trace.tree.capped.js';
+    import cappedToileTree from './data/toile.tree.capped.js';
+    import cappedTroneTree from './data/trone.tree.capped.js';
     import cappedSoareTree from './data/soare.tree.capped.js';
+    import cappedThaleTree from './data/thale.tree.capped.js';
 
-    import cappedHardSlaneTree from './data/slane.tree.hard.capped.js';
-    import cappedHardSlateTree from './data/slate.tree.hard.capped.js';
-    import cappedHardSaiceTree from './data/saice.tree.hard.capped.js';
-    import cappedHardSaineTree from './data/saine.tree.hard.capped.js';
-    import cappedHardSaletTree from './data/salet.tree.hard.capped.js';
+    import cappedHardTraceTree from './data/trace.tree.hard.capped.js';
+    import cappedHardToiseTree from './data/toise.tree.hard.capped.js';
+    import cappedHardTroneTree from './data/trone.tree.hard.capped.js';
+    import cappedHardToileTree from './data/toile.tree.hard.capped.js';
     import cappedHardSoareTree from './data/soare.tree.hard.capped.js';
+    import cappedHardTorseTree from './data/torse.tree.hard.capped.js';
 
     import targetWords from './data/targetWords.js';
 
@@ -379,7 +379,7 @@
       }
     } );
 
-    const helpText = new scenery.RichText( 'Click one of the starting guesses, I\'ll give you the rest!<br><br>Click the letters to change the color to match your result, then you\'ll be given another guess (or click a thumbnail option below).<br><br>Optimized over the 14,855-word dictionary across uniform and frequency-weighted priors (~3.52 avg guesses per win under frequency weighting, ~4.14 under uniform). <a href="{{about}}">Learn More</a>.', {
+    const helpText = new scenery.RichText( 'Click one of the starting guesses, I\'ll give you the rest!<br><br>Click the letters to change the color to match your result, then you\'ll be given another guess (or click a thumbnail option below).<br><br>Optimized over the 14,855-word dictionary with uniform or empirical English word-frequency priors (wordfreq data, conditioned on official Wordle answers). <a href="{{about}}">Learn More</a>.', {
       lineWrap: 450,
       font: new scenery.Font( { size: 14, family: fontFamily } ),
       layoutOptions: { topMargin: 15 },
@@ -419,24 +419,24 @@
               orientation: 'vertical',
               children: [
                 new scenery.Text( 'Fastest Average', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
-                createTreeButton( totalSlateTree, 'SLATE' ),
+                createTreeButton( totalTorseTree, 'TORSE' ),
+                createTreeButton( totalTroneTree, 'TRONE' ),
                 createTreeButton( totalTraceTree, 'TRACE' ),
-                createTreeButton( totalSaletTree, 'SALET' ),
-                createTreeButton( totalReastTree, 'REAST' ),
-                createTreeButton( totalCraneTree, 'CRANE' ),
-                createTreeButton( totalLeastTree, 'LEAST' )
+                createTreeButton( totalTiareTree, 'TIARE' ),
+                createTreeButton( totalRoateTree, 'ROATE' ),
+                createTreeButton( totalTarseTree, 'TARSE' )
               ]
             } ),
             new scenery.FlowBox( {
               orientation: 'vertical',
               children: [
                 new scenery.Text( 'Fewest', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
-                createTreeButton( minSlateTree, 'SLATE' ),
-                createTreeButton( minSaletTree, 'SALET' ),
-                createTreeButton( minTraceTree, 'TRACE' ),
-                createTreeButton( minCraneTree, 'CRANE' ),
-                createTreeButton( minLeastTree, 'LEAST' ),
-                createTreeButton( minStareTree, 'STARE' )
+                createTreeButton( minRanidTree, 'RANID' ),
+                createTreeButton( minRantsTree, 'RANTS' ),
+                createTreeButton( minManetTree, 'MANET' ),
+                createTreeButton( minSanerTree, 'SANER' ),
+                createTreeButton( minRatedTree, 'RATED' ),
+                createTreeButton( minLanesTree, 'LANES' )
               ]
             } ),
             new scenery.FlowBox( {
@@ -444,35 +444,35 @@
               children: [
                 new scenery.Text( 'Hard Mode', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
                 createTreeButton( hardTraceTree, 'TRACE' ),
-                createTreeButton( hardSlateTree, 'SLATE' ),
-                createTreeButton( hardLeastTree, 'LEAST' ),
-                createTreeButton( hardSaletTree, 'SALET' ),
-                createTreeButton( hardReastTree, 'REAST' ),
-                createTreeButton( hardCraneTree, 'CRANE' )
+                createTreeButton( hardTroneTree, 'TRONE' ),
+                createTreeButton( hardTiareTree, 'TIARE' ),
+                createTreeButton( hardTorseTree, 'TORSE' ),
+                createTreeButton( hardTarseTree, 'TARSE' ),
+                createTreeButton( hardToresTree, 'TORES' )
               ]
             } ),
             new scenery.FlowBox( {
               orientation: 'vertical',
               children: [
                 new scenery.Text( 'SoG Capped Knee', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
-                createTreeButton( cappedSlaneTree, 'SLANE' ),
-                createTreeButton( cappedSlateTree, 'SLATE' ),
-                createTreeButton( cappedSaiceTree, 'SAICE' ),
-                createTreeButton( cappedSaineTree, 'SAINE' ),
-                createTreeButton( cappedSaletTree, 'SALET' ),
-                createTreeButton( cappedSoareTree, 'SOARE' )
+                createTreeButton( cappedToiseTree, 'TOISE' ),
+                createTreeButton( cappedThaleTree, 'THALE' ),
+                createTreeButton( cappedTraceTree, 'TRACE' ),
+                createTreeButton( cappedToileTree, 'TOILE' ),
+                createTreeButton( cappedSoareTree, 'SOARE' ),
+                createTreeButton( cappedTroneTree, 'TRONE' )
               ]
             } ),
             new scenery.FlowBox( {
               orientation: 'vertical',
               children: [
                 new scenery.Text( 'SoG Capped Knee Hard', { font: selectionHeaderFont, fill: gray, layoutOptions: { bottomMargin: 5 } } ),
-                createTreeButton( cappedHardSlaneTree, 'SLANE (Hard)' ),
-                createTreeButton( cappedHardSlateTree, 'SLATE (Hard)' ),
-                createTreeButton( cappedHardSaiceTree, 'SAICE (Hard)' ),
-                createTreeButton( cappedHardSaineTree, 'SAINE (Hard)' ),
-                createTreeButton( cappedHardSaletTree, 'SALET (Hard)' ),
-                createTreeButton( cappedHardSoareTree, 'SOARE (Hard)' )
+                createTreeButton( cappedHardTraceTree, 'TRACE (Hard)' ),
+                createTreeButton( cappedHardToileTree, 'TOILE (Hard)' ),
+                createTreeButton( cappedHardToiseTree, 'TOISE (Hard)' ),
+                createTreeButton( cappedHardTroneTree, 'TRONE (Hard)' ),
+                createTreeButton( cappedHardSoareTree, 'SOARE (Hard)' ),
+                createTreeButton( cappedHardTorseTree, 'TORSE (Hard)' )
               ]
             } ),
           ]

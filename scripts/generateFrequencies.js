@@ -1,6 +1,7 @@
 // Generator for data/wordFrequencies.js and server/wordFrequencies.js
 import fs from 'fs';
 import targetWords from '../data/targetWords.js';
+import { CORPUS_WORD_FREQUENCIES } from '../data/corpusWordFrequencies.js';
 
 const c0 = `aback, abase, abate, abbey, abbot, abhor, abide, abled, abode, abort, about, above, abuse, abyss, acorn, acrid, actor, acute, adage, adapt, adept, admin, admit, adobe, adopt, adore, adorn, adult, affix, afire, afoot, afoul, after, again, agape, agate, agent, agile, aging, aglow, agony, agora, agree, ahead, aider, aisle, alarm, album, alert, algae, alibi, alien, align, alike, alive, allay, alley, allot, allow, alloy, aloft, alone, along, aloof, aloud, alpha, altar, alter, amass, amaze, amber, amble, amend, amiss, amity, among, ample, amply, amuse, angel, anger, angle, angry, angst, anime, ankle, annex, annoy, annul, anode, antic, anvil, aorta, apart, aphid, aping, apnea, apple, apply, apron, aptly, arbor, ardor, arena, argue, arise, armor, aroma, arose, array, arrow, arson, artsy, ascot, ashen, aside, askew, assay, asset, atoll, atone, attic, audio, audit, augur, aunty, avail, avert, avian, avoid, await, awake, award, aware, awash, awful, awoke, axial, axiom, axion, azure, bacon, badge, badly, bagel, baggy, baker, baler, balmy, banal, banjo, barge, baron, basal, basic, basil, basin, basis, baste, batch, bathe, baton, batty, bawdy, bayou, beach, beady, beard, beast, beech, beefy, befit, began, begat, beget, begin, begun, being, belch, belie, belle, belly, below, bench, beret, berry, berth, beset, betel, bevel, bezel, bible, bicep, biddy, bigot, bilge, billy, binge, bingo, biome, birch, birth, bison, bitty, black, blade, blame, bland, blank, blare, blast, blaze, bleak, bleat, bleed, bleep, blend, bless, blimp, blind, blink, bliss, blitz, bloat, block, bloke, blond, blood, bloom, blown, bluer, bluff, blunt, blurb, blurt, blush, board, boast, bobby, boney, bongo, bonus, booby, boost, booth, booty, booze, boozy, borax, borne, bosom, bossy, botch, bough, boule, bound, bowel, boxer, brace, braid, brain, brake, brand, brash, brass, brave, bravo, brawl, brawn, bread, break, breed, briar, bribe, brick, bride, brief, brine, bring, brink, briny, brisk, broad, broil, broke, brood, brook, broom, broth, brown, brunt, brush, brute, buddy, budge, buggy, bugle, build, built`;
 
@@ -16,23 +17,19 @@ const wordleAnswers = [...new Set([c0, c1, c2, c3, c4].flatMap(c => c.split(',')
 
 console.log(`Compiled ${wordleAnswers.length} official Wordle answers.`);
 
-const targetSet = new Set(targetWords);
-const answerSet = new Set(wordleAnswers);
-
-// Generate letter n-gram background log probabilities for 5-letter words
-const charFreq = {
-  e: 12.02, t: 9.10, a: 8.12, o: 7.68, i: 7.31, n: 6.95, s: 6.28, r: 6.02, h: 5.92, d: 4.32,
-  l: 3.98, u: 2.88, c: 2.71, m: 2.61, f: 2.30, y: 2.11, w: 2.09, g: 2.03, p: 1.82, b: 1.49,
-  v: 1.11, k: 0.69, x: 0.17, q: 0.11, j: 0.10, z: 0.07
-};
+if (CORPUS_WORD_FREQUENCIES.length !== targetWords.length) {
+  throw new Error('Corpus frequency table does not match targetWords.js');
+}
 
 // Generate wordFrequencies.js content
 const output = `// Word frequency distributions and official Wordle solution classifications
 // for all 14,855 dictionary target words.
 
 import targetWords from './targetWords.js';
+import { CORPUS_WORD_FREQUENCIES } from './corpusWordFrequencies.js';
 
 export const NT = targetWords.length;
+const MAX_CORPUS_FREQUENCY = Math.max(...CORPUS_WORD_FREQUENCIES);
 
 // Set of 2,315 curated official Wordle solution words
 export const WORDLE_ANSWERS_LIST = ${JSON.stringify(wordleAnswers, null, 2)};
@@ -47,14 +44,15 @@ export const isWordleAnswer = word => WORDLE_ANSWERS_SET.has(word);
  *
  * Supported models:
  * - 'uniform': Equal weight (1 / NT) for all 14,855 words.
- * - 'wordleAnswers': Solution words (2,315) receive high weight; non-solutions receive epsilon (default 1e-4).
- * - 'corpus': Prior based on natural language word frequencies (Zipf / log frequencies).
- * - 'hybrid': Corpus frequency multiplied by a solution boost factor for official answers.
+ * - 'wordleAnswers': Actual English corpus frequencies, conditioned on the 2,315 official answers;
+ *   non-answer words retain a small epsilon prior relative to the most common word.
+ * - 'corpus': Actual English corpus frequencies for every target word.
+ * - 'hybrid': Actual corpus frequency multiplied by a solution boost for official answers.
  * - 'custom': User-supplied weights array or mapping object.
  *
  * @param {string|Array|Object} model - The weighting model name or custom weight source.
  * @param {Object} [options]
- * @param {number} [options.epsilon=1e-4] - Non-answer weight for 'wordleAnswers' model.
+ * @param {number} [options.epsilon=1e-4] - Relative non-answer prior for 'wordleAnswers' model.
  * @param {number} [options.alpha=1.0] - Temperature / exponent for power smoothing.
  * @param {number} [options.answerBoost=10.0] - Solution boost multiplier for 'hybrid' model.
  * @returns {Float64Array} Normalized weights (length NT, sum = 1.0).
@@ -71,27 +69,25 @@ export const getFrequencyWeights = (model = 'uniform', options = {}) => {
     return weights;
   }
 
-  if (model === 'wordleAnswers') {
+  if (model === 'wordleAnswers' || model === 'corpus' || model === 'hybrid') {
     let total = 0;
     for (let i = 0; i < NT; i++) {
       const isAns = WORDLE_ANSWERS_SET.has(targetWords[i]);
-      const w = isAns ? 1.0 : epsilon;
-      weights[i] = w;
-      total += w;
-    }
-    for (let i = 0; i < NT; i++) weights[i] /= total;
-    return weights;
-  }
-
-  if (model === 'hybrid') {
-    let total = 0;
-    for (let i = 0; i < NT; i++) {
-      const w = targetWords[i];
-      const isAns = WORDLE_ANSWERS_SET.has(w);
-      const raw = isAns ? answerBoost : 1.0;
+      const corpusFrequency = CORPUS_WORD_FREQUENCIES[i];
+      let raw = corpusFrequency;
+      if (model === 'wordleAnswers' && !isAns) {
+        raw = MAX_CORPUS_FREQUENCY * epsilon;
+      }
+      else if (model === 'hybrid' && isAns) {
+        raw *= answerBoost;
+      }
       const val = Math.pow(raw, alpha);
       weights[i] = val;
       total += val;
+    }
+    if (!(total > 0) || !Number.isFinite(total)) {
+      weights.fill(1.0 / NT);
+      return weights;
     }
     for (let i = 0; i < NT; i++) weights[i] /= total;
     return weights;
@@ -135,5 +131,5 @@ export default {
 `;
 
 fs.writeFileSync('data/wordFrequencies.js', output);
-fs.writeFileSync('server/wordFrequencies.js', output);
+fs.writeFileSync('server/wordFrequencies.js', output.replace("'./corpusWordFrequencies.js'", "'../data/corpusWordFrequencies.js'"));
 console.log('Successfully generated data/wordFrequencies.js and server/wordFrequencies.js');
