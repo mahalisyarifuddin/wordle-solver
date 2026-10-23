@@ -1,59 +1,40 @@
-// Builds exact decision trees for all 5 Preexisting Modes under Frequency Weighting
+// Builds the empirically best-scoring starter sets for each shipped mode.
+// All weighted modes are rebuilt from the corpus prior; the Fewest trees use
+// the deeper minimax roots established by DEEP_SEARCH_REPORT.md. A native
+// exact endgame pass is applied to all 30 resulting trees afterward.
 import fs from 'fs';
+import { execFileSync } from 'child_process';
 import { buildFrequencyTree } from './buildFrequencyTree.js';
-import { evaluateWeighted } from './sogEval.js';
-import { getFrequencyWeights } from '../data/wordFrequencies.js';
-
-const weights = getFrequencyWeights('wordleAnswers');
 
 const ALL_BUILDS = [
-  // 1. Fastest Average (normal mode, gamma = 0)
-  { file: 'data/salet.tree.total.js', starter: 'salet', mode: 'normal', yw: 0.0 },
-  { file: 'data/slate.tree.total.js', starter: 'slate', mode: 'normal', yw: 0.0 },
-  { file: 'data/trace.tree.total.js', starter: 'trace', mode: 'normal', yw: 0.0 },
-  { file: 'data/crane.tree.total.js', starter: 'crane', mode: 'normal', yw: 0.0 },
-  { file: 'data/least.tree.total.js', starter: 'least', mode: 'normal', yw: 0.0 },
-  { file: 'data/reast.tree.total.js', starter: 'reast', mode: 'normal', yw: 0.0 },
+  // Fastest Average: normal mode, minimize expected guesses.
+  ...['torse', 'trone', 'trace', 'tiare', 'roate', 'tarse'].map(starter => ({
+    file: `data/${starter}.tree.total.js`, starter, mode: 'normal', yw: 0.0
+  })),
 
-  // 2. Fewest (normal mode, min depth)
-  { file: 'data/slate.tree.js', starter: 'slate', mode: 'normal', yw: 0.0 },
-  { file: 'data/salet.tree.js', starter: 'salet', mode: 'normal', yw: 0.0 },
-  { file: 'data/trace.tree.js', starter: 'trace', mode: 'normal', yw: 0.0 },
-  { file: 'data/least.tree.js', starter: 'least', mode: 'normal', yw: 0.0 },
-  { file: 'data/crane.tree.js', starter: 'crane', mode: 'normal', yw: 0.0 },
-  { file: 'data/stare.tree.js', starter: 'stare', mode: 'normal', yw: 0.0 },
+  // Hard Mode: minimize frequency-weighted expected guesses.
+  ...['trace', 'trone', 'tiare', 'torse', 'tarse', 'tores'].map(starter => ({
+    file: `data/${starter}.tree.hard.js`, starter, mode: 'hard', yw: 0.0
+  })),
 
-  // 3. Hard Mode (hard mode, gamma = 0)
-  { file: 'data/trace.tree.hard.js', starter: 'trace', mode: 'hard', yw: 0.0 },
-  { file: 'data/slate.tree.hard.js', starter: 'slate', mode: 'hard', yw: 0.0 },
-  { file: 'data/salet.tree.hard.js', starter: 'salet', mode: 'hard', yw: 0.0 },
-  { file: 'data/least.tree.hard.js', starter: 'least', mode: 'hard', yw: 0.0 },
-  { file: 'data/reast.tree.hard.js', starter: 'reast', mode: 'hard', yw: 0.0 },
-  { file: 'data/crane.tree.hard.js', starter: 'crane', mode: 'hard', yw: 0.0 },
+  // Sea of Greens capped knee: gamma = 0.45.
+  ...['toise', 'thale', 'trace', 'toile', 'soare', 'trone'].map(starter => ({
+    file: `data/${starter}.tree.capped.js`, starter, mode: 'normal', yw: 0.45
+  })),
 
-  // 4. SoG Capped Knee (normal mode, gamma = 0.45)
-  { file: 'data/slate.tree.capped.js', starter: 'slate', mode: 'normal', yw: 0.45 },
-  { file: 'data/salet.tree.capped.js', starter: 'salet', mode: 'normal', yw: 0.45 },
-  { file: 'data/saine.tree.capped.js', starter: 'saine', mode: 'normal', yw: 0.45 },
-  { file: 'data/saice.tree.capped.js', starter: 'saice', mode: 'normal', yw: 0.45 },
-  { file: 'data/slane.tree.capped.js', starter: 'slane', mode: 'normal', yw: 0.45 },
-  { file: 'data/soare.tree.capped.js', starter: 'soare', mode: 'normal', yw: 0.45 },
-
-  // 5. SoG Capped Knee Hard (hard mode, gamma = 0.45)
-  { file: 'data/slate.tree.hard.capped.js', starter: 'slate', mode: 'hard', yw: 0.45 },
-  { file: 'data/salet.tree.hard.capped.js', starter: 'salet', mode: 'hard', yw: 0.45 },
-  { file: 'data/saine.tree.hard.capped.js', starter: 'saine', mode: 'hard', yw: 0.45 },
-  { file: 'data/slane.tree.hard.capped.js', starter: 'slane', mode: 'hard', yw: 0.45 },
-  { file: 'data/saice.tree.hard.capped.js', starter: 'saice', mode: 'hard', yw: 0.45 },
-  { file: 'data/soare.tree.hard.capped.js', starter: 'soare', mode: 'hard', yw: 0.45 }
+  // Sea of Greens capped knee, Hard Mode: gamma = 0.45.
+  ...['trace', 'toile', 'toise', 'trone', 'soare', 'torse'].map(starter => ({
+    file: `data/${starter}.tree.hard.capped.js`, starter, mode: 'hard', yw: 0.45
+  }))
 ];
 
-console.log(`Building ${ALL_BUILDS.length} frequency-weighted decision trees across all 5 modes...`);
-
+console.log(`Building ${ALL_BUILDS.length} corpus-weighted trees for the top starters across four modes...`);
 for (const b of ALL_BUILDS) {
   console.log(`\nBuilding: ${b.starter.toUpperCase()} (${b.mode}, yw=${b.yw}) -> ${b.file}...`);
   const { tree } = buildFrequencyTree(b.starter, b.mode, 'wordleAnswers', b.yw);
   fs.writeFileSync(b.file, `export default ${JSON.stringify(tree)}`);
 }
 
-console.log('\nAll 5-mode trees built and saved successfully!');
+console.log('\nApplying exact C++ endgame refinement (max candidate set size 3)...');
+execFileSync(process.execPath, ['scripts/refineExactEndgames.js', '--max-size=3'], { stdio: 'inherit' });
+console.log('\nAll mode trees rebuilt and endgame-refined successfully!');

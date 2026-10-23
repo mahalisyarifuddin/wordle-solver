@@ -31,6 +31,7 @@ class ComputationNode {
     this._widx = null;
     this._wset = null;
     this._cnt = new Int32Array( 243 );
+    this._wcnt = new Float64Array( 243 );
     this._touched = new Int32Array( 243 );
 
     if ( !skip ) {
@@ -192,12 +193,17 @@ class ComputationNode {
       } else {
         const row = gi * targetWords.length;
         let nTouched = 0;
+        const hasWeights = targetWeights !== null && targetWeights !== undefined;
+        const wcnt = this._wcnt;
         for ( let k = 0; k < wlen; k++ ) {
-          const s = matrix[ row + widx[ k ] ];
+          const targetIndex = widx[ k ];
+          const s = matrix[ row + targetIndex ];
           if ( cnt[ s ] === 0 ) touched[ nTouched++ ] = s;
           cnt[ s ]++;
+          if ( hasWeights ) wcnt[ s ] += targetWeights[ targetIndex ];
         }
         let count = 0, best = 0, totalY = 0;
+        let totalWeight = 0, weightedYellows = 0, maxBucketWeight = 0, weightedExpectedRemaining = 0;
         for ( let k = 0; k < nTouched; k++ ) {
           const s = touched[ k ];
           const c = cnt[ s ];
@@ -205,17 +211,24 @@ class ComputationNode {
           count++;
           if ( c > best ) best = c;
           totalY += yellowsArray[ s ] * c;
+          if ( hasWeights ) {
+            const bucketWeight = wcnt[ s ];
+            wcnt[ s ] = 0;
+            totalWeight += bucketWeight;
+            weightedYellows += yellowsArray[ s ] * bucketWeight;
+            weightedExpectedRemaining += bucketWeight * c;
+            if ( bucketWeight > maxBucketWeight ) maxBucketWeight = bucketWeight;
+          }
         }
-        const hasWeights = targetWeights !== null && targetWeights !== undefined;
         if ( count === 1 && wlen > 1 ) size = 1e6;
-        else if ( hasWeights ) {
+        else if ( hasWeights && totalWeight > 0 ) {
           const isTarget = this._wset.has( guess );
           const guessIdx = targetWordIndexMap.get( guess );
           const guessW = ( isTarget && guessIdx !== undefined ) ? targetWeights[ guessIdx ] : 0;
-          size = heuristic.averageWeight * ( wlen - ( isTarget ? 1 : 0 ) ) / count +
-            heuristic.bestWeight * best +
-            heuristic.yellowWeight * totalY / wlen;
-          if ( isTarget ) size -= ( 10 + 50 * guessW * wlen );
+          size = heuristic.averageWeight * Math.max( 0, weightedExpectedRemaining / totalWeight - guessW / totalWeight ) +
+            heuristic.bestWeight * maxBucketWeight * wlen / totalWeight +
+            heuristic.yellowWeight * weightedYellows / totalWeight;
+          if ( isTarget ) size -= ( 10 + 50 * guessW / totalWeight );
         } else {
           const isTarget = this._wset.has( guess );
           size = heuristic.averageWeight * ( wlen - ( isTarget ? 1 : 0 ) ) / count +
@@ -424,6 +437,8 @@ class Heuristic {
     const hasWeights = weights !== null && weights !== undefined;
     let totalWeight = 0;
     let maxBucketWeight = 0;
+    let weightedExpectedRemaining = 0;
+    let weightedYellows = 0;
 
     for ( const rawScore in map ) {
       const list = map[ rawScore ];
@@ -440,6 +455,8 @@ class Heuristic {
         }
         if ( bw > maxBucketWeight ) maxBucketWeight = bw;
         totalWeight += bw;
+        weightedExpectedRemaining += bw * length;
+        weightedYellows += yellowsArray[ rawScore ] * bw;
       }
     }
     if ( count === 1 && words.length > 1 ) return 1e6;
@@ -449,9 +466,9 @@ class Heuristic {
       const guessIdx = targetWordIndexMap.get( guess );
       const guessWeight = ( isTarget && guessIdx !== undefined ) ? weights[ guessIdx ] : 0;
       const pTarget = guessWeight / totalWeight;
-      let size = heuristic.averageWeight * ( totalWeight - guessWeight ) / count +
-        heuristic.bestWeight * maxBucketWeight * words.length +
-        heuristic.yellowWeight * totalYellows / words.length;
+      let size = heuristic.averageWeight * Math.max( 0, weightedExpectedRemaining / totalWeight - pTarget ) +
+        heuristic.bestWeight * maxBucketWeight * words.length / totalWeight +
+        heuristic.yellowWeight * weightedYellows / totalWeight;
       if ( isTarget ) size -= ( 10 + 50 * pTarget );
       return size;
     }
