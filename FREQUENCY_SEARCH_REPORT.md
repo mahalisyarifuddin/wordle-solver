@@ -1,5 +1,12 @@
 # Frequency-Weighted Wordle Solver: 5-Mode Starters & Retuned Pareto Knee
 
+> **2026-11-13 correction — flat non-answer prior removed.** The `wordleAnswers` prior used to replace every non-official-answer word with one shared epsilon weight (`MAX_FREQ * 1e-4`). 12,540 of the 14,855 targets therefore carried *identical* probability, and every in-bucket decision resolved to whichever word came first in alphabetical order. The visible symptom was answering MOXIE with `TRACE > SHINE > MOVIE > MOBIE > MOLIE > MOMIE > MOWIE > MOXIE`: five information guesses that never considered the actual word. Two independent fixes are now in place:
+>
+> 1. `getFrequencyWeights()` keeps real per-word corpus frequencies for *all* words (soft floor `MAX_FREQ * 1e-6`, answer boost `×10`), so MOXIE (3.5e-7) outranks filler like MOBIE (1e-9) by ~140×.
+> 2. Every tie-break (in `wordleCompute.js`, `sogCommon.js`, `buildFrequencyTree.js`) now prefers the higher-prior word instead of the first candidate in dictionary order.
+>
+> All 30 shipped trees were rebuilt. On the 2,315 official answers every tree improved in expected turns (−0.05 to −0.08) and the worst-case depth dropped from 11 to 8–9. See `PRIOR_FIX_REPORT.md` for measurements and `scripts/testPriors.js` for regression tests.
+>
 > **Historical report:** The results below were generated with an earlier proxy that assigned equal weight to every official answer. Current solver priors use empirical per-word English frequencies bundled in `data/corpusWordFrequencies.js`; the tables below are not current performance measurements. Current app starter rankings and exact tree metrics are summarized next. Tree prefixes still use calibrated search, with exact native dynamic-programming refinement for small endgames; full-root global optimality is not certified. See `scripts/EXACT_ENDGAME_SEARCH.md` for details.
 
 ## Current app starter selections

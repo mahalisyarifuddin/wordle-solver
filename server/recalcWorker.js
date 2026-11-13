@@ -4,7 +4,7 @@
 // the '00000' bucket, and finally the requested exact metric tree.
 import { parentPort, workerData } from 'worker_threads';
 import { setHardMode } from './wordleCore.js';
-import { Ranking, ComputationNode, Heuristic } from './wordleCompute.js';
+import { Ranking, ComputationNode, Heuristic, setTargetWeights } from './wordleCompute.js';
 import targetWords from './targetWords.js';
 import guessWords from './guessWords.js';
 import { setSharedScores } from './partition.js';
@@ -13,6 +13,10 @@ const { starter, metricName, name, hardMode, sharedBuffer } = workerData;
 
 setSharedScores( sharedBuffer );
 setHardMode( hardMode );
+// The heuristic reads the corpus prior through this module-level setter. It was
+// never called here, so minimax trees were built unweighted and could pick pure
+// dictionary filler (DIRLS, BHAJI, ABAFT) as probes.
+setTargetWeights( 'wordleAnswers' );
 
 const node = new ComputationNode( targetWords, [], guessWords, true );
 node.openSpecificGuess( starter );
@@ -30,6 +34,8 @@ const recurse = ( computationNode, depth ) => {
 };
 recurse( guessNode.map[ '00000' ], 1 );
 
-const metric = metricName === 'total' ? Ranking.totalGuessesMetric : Ranking.minimizeLongestMetric;
-const tree = guessNode.createTree( metric );
+const metric = metricName === 'total' ? Ranking.totalGuessesMetric
+  : metricName === 'weightedmin' ? Ranking.weightedMinimizeLongestMetric
+  : Ranking.minimizeLongestMetric;
+const tree = guessNode.createTree( metric, targetWords );
 parentPort.postMessage( { tree } );

@@ -44,24 +44,36 @@ export const isWordleAnswer = word => WORDLE_ANSWERS_SET.has(word);
  *
  * Supported models:
  * - 'uniform': Equal weight (1 / NT) for all 14,855 words.
- * - 'wordleAnswers': Actual English corpus frequencies, conditioned on the 2,315 official answers;
- *   non-answer words retain a small epsilon prior relative to the most common word.
- * - 'corpus': Actual English corpus frequencies for every target word.
- * - 'hybrid': Actual corpus frequency multiplied by a solution boost for official answers.
+ * - 'wordleAnswers' (default): Real English corpus frequencies for *every*
+ *   dictionary word, with official Wordle solutions boosted by
+ *   answerBoost. The previous implementation flattened all non-answer words
+ *   onto one shared epsilon weight, which left 12,540 targets in an exact tie;
+ *   every in-bucket decision then fell back to dictionary iteration order
+ *   (alphabetical), producing the infamous MOVIE > MOBIE > MOLIE > MOMIE >
+ *   MOWIE > MOXIE march. Keeping real frequencies gives rare-but-real words
+ *   like MOXIE a voice while still favouring likely answers.
+ * - 'corpus': Raw English corpus frequencies for every target word.
+ * - 'hybrid': Alias for 'wordleAnswers' (kept for older scripts).
  * - 'custom': User-supplied weights array or mapping object.
  *
- * @param {string|Array|Object} model - The weighting model name or custom weight source.
+ * All frequency models run through a soft floor of epsilon (relative to the
+ * most common word) so words with a 1e-9 corpus estimate are still ordered by
+ * their real frequency instead of collapsing onto one value.
+ *
+ * @param {string|Array|Object} model - The weighting model name or custom weight source (defaults to 'wordleAnswers').
  * @param {Object} [options]
- * @param {number} [options.epsilon=1e-4] - Relative non-answer prior for 'wordleAnswers' model.
+ * @param {number} [options.epsilon=1e-6] - Relative floor applied to every corpus frequency.
  * @param {number} [options.alpha=1.0] - Temperature / exponent for power smoothing.
- * @param {number} [options.answerBoost=10.0] - Solution boost multiplier for 'hybrid' model.
+ * @param {number} [options.answerBoost=10.0] - Solution boost multiplier for answer-weighted models.
  * @returns {Float64Array} Normalized weights (length NT, sum = 1.0).
  */
-export const getFrequencyWeights = (model = 'uniform', options = {}) => {
+export const DEFAULT_FREQUENCY_MODEL = 'wordleAnswers';
+export const getFrequencyWeights = (model = DEFAULT_FREQUENCY_MODEL, options = {}) => {
   const weights = new Float64Array(NT);
-  const epsilon = options.epsilon !== undefined ? options.epsilon : 1e-4;
+  const epsilon = options.epsilon !== undefined ? options.epsilon : 1e-6;
   const alpha = options.alpha !== undefined ? options.alpha : 1.0;
   const answerBoost = options.answerBoost !== undefined ? options.answerBoost : 10.0;
+  const frequencyFloor = MAX_CORPUS_FREQUENCY * epsilon;
 
   if (model === 'uniform') {
     const u = 1.0 / NT;
@@ -70,15 +82,13 @@ export const getFrequencyWeights = (model = 'uniform', options = {}) => {
   }
 
   if (model === 'wordleAnswers' || model === 'corpus' || model === 'hybrid') {
+    const boostAnswers = model !== 'corpus';
     let total = 0;
     for (let i = 0; i < NT; i++) {
-      const isAns = WORDLE_ANSWERS_SET.has(targetWords[i]);
-      const corpusFrequency = CORPUS_WORD_FREQUENCIES[i];
-      let raw = corpusFrequency;
-      if (model === 'wordleAnswers' && !isAns) {
-        raw = MAX_CORPUS_FREQUENCY * epsilon;
-      }
-      else if (model === 'hybrid' && isAns) {
+      // Soft floor: preserves the ordering of extremely rare words instead of
+      // tying them all together (the bug this replaced).
+      let raw = Math.max(CORPUS_WORD_FREQUENCIES[i], frequencyFloor);
+      if (boostAnswers && WORDLE_ANSWERS_SET.has(targetWords[i])) {
         raw *= answerBoost;
       }
       const val = Math.pow(raw, alpha);

@@ -4,7 +4,7 @@
 import fs from 'fs';
 import targetWords from '../data/targetWords.js';
 import guessWords from '../server/guessWords.js';
-import { NT, NG, GUESSES, TARGETS, t2g, buildMatrix, loadCalib, evalCandidate, setTargetWeights } from './sogCommon.js';
+import { NT, NG, GUESSES, TARGETS, t2g, g2t, buildMatrix, loadCalib, evalCandidate, setTargetWeights } from './sogCommon.js';
 import { getYellows, getHardModeConstraints, isHardModeValidOptimized } from '../server/wordleCore.js';
 import { getFrequencyWeights } from '../data/wordFrequencies.js';
 import { evaluateWeighted } from './sogEval.js';
@@ -42,17 +42,20 @@ const rankCandidates = ( words, base, len, mode, constraint, topN ) => {
     if ( r.joint !== Infinity ) results.push( [ gi, r.E, r.Y, r.E + YELLOW_WEIGHT * r.Y ] );
   };
 
-  const ibOnly = len <= 2;
-  for ( let i = 0; i < len; i++ ) consider( t2g[ words[ base + i ] ] );
-
   // Exhaustively evaluate all legal guesses at every nontrivial node. The
   // continuation value inside evalCandidate remains calibrated, but no legal
   // action is discarded by a static or one-ply shortlist before scoring.
+  for ( let i = 0; i < len; i++ ) consider( t2g[ words[ base + i ] ] );
   if ( len > 2 ) {
     for ( let gi = 0; gi < NG; gi++ ) consider( gi );
   }
 
-  results.sort( ( a, b ) => a[ 3 ] - b[ 3 ] || a[ 1 ] - b[ 1 ] );
+  // Ties are extremely common (flat priors tie entire buckets exactly), so the
+  // final key must not be dictionary order. Prefer the higher-prior guess, which
+  // is also the only way a word like MOXIE can ever be picked over MOBIE.
+  results.sort( ( a, b ) => a[ 3 ] - b[ 3 ] || a[ 1 ] - b[ 1 ] ||
+    targetWeights[ g2t[ b[ 0 ] ] ] - targetWeights[ g2t[ a[ 0 ] ] ] ||
+    ( GUESSES[ a[ 0 ] ] < GUESSES[ b[ 0 ] ] ? -1 : 1 ) );
   return results.slice( 0, topN );
 };
 
@@ -224,12 +227,11 @@ const buildRoot = ( starter, mode ) => {
   return { guess: starter, map, ranking: { counts: fillCounts( counts ), yellows }, depth };
 };
 
-export const buildFrequencyTree = ( starter, mode = 'normal', freqModel = 'wordleAnswers', yellowWeight = 0.35 ) => {
+export const buildFrequencyTree = ( starter, mode = 'normal', freqModel = 'wordleAnswers', yellowWeight = 0.35, quiet = false ) => {
   YELLOW_WEIGHT = yellowWeight;
   matrix = new Uint8Array( buildMatrix() );
   targetWeights = getFrequencyWeights( freqModel );
   setTargetWeights( targetWeights );
-
   const raw = JSON.parse( fs.readFileSync( 'data/calib.json', 'utf8' ) );
   const mk = o => { const g = new Float64Array( o.g ); const y = new Float64Array( o.y ); g[ 1 ] = 1; y[ 1 ] = 0; return { g, y }; };
   calib = {
@@ -238,15 +240,16 @@ export const buildFrequencyTree = ( starter, mode = 'normal', freqModel = 'wordl
   };
 
   const t0 = Date.now();
-  console.log( `Building frequency-weighted tree for '${starter}' (${mode}) under freq='${freqModel}'...` );
+  const log = quiet ? () => {} : console.log;
+  log( `Building frequency-weighted tree for '${starter}' (${mode}) under freq='${freqModel}'...` );
   const sub = buildRoot( starter, mode );
   const tree = { guess: starter, map: sub.map, ranking: sub.ranking, depth: sub.depth };
   const elapsed = ( ( Date.now() - t0 ) / 1000 ).toFixed( 1 );
-  console.log( `Tree built in ${elapsed}s.` );
+  log( `Tree built in ${elapsed}s.` );
 
   const evalRes = evaluateWeighted( tree, targetWeights );
-  console.log( `[Uniform] avgGuesses=${evalRes.avgGuesses.toFixed( 4 )} avgYellows=${evalRes.avgYellows.toFixed( 4 )}` );
-  console.log( `[Weighted] E[guesses]=${evalRes.weighted.expGuesses.toFixed( 4 )} E[yellows]=${evalRes.weighted.expYellows.toFixed( 4 )} L_capped=${evalRes.weighted.cappedScore.toFixed( 4 )}` );
+  log( `[Uniform] avgGuesses=${evalRes.avgGuesses.toFixed( 4 )} avgYellows=${evalRes.avgYellows.toFixed( 4 )}` );
+  log( `[Weighted] E[guesses]=${evalRes.weighted.expGuesses.toFixed( 4 )} E[yellows]=${evalRes.weighted.expYellows.toFixed( 4 )} L_capped=${evalRes.weighted.cappedScore.toFixed( 4 )}` );
 
   return { tree, eval: evalRes };
 };

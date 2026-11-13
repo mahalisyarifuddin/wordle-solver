@@ -14,6 +14,31 @@ export const setTargetWeights = w => {
 };
 export const getTargetWeights = () => targetWeights;
 
+// Deterministic tie-break for equal heuristic scores.
+//
+// The heuristic routinely produces exact ties: before the prior fix every
+// non-answer word carried the same epsilon weight, so a whole bucket of
+// information guesses scored identically. `getNextOption` used `size < bestSize`,
+// which silently kept whichever word came first in `possibleGuesses` - i.e.
+// alphabetical order. That is what made the solver march
+// MOBIE > MOLIE > MOMIE > MOWIE > MOXIE instead of guessing MOXIE.
+//
+// Break ties by prior probability (higher first), then by word so the result is
+// stable across runs.
+const isBetterOption = ( size, guess, bestSize, bestGuess ) => {
+  if ( size < bestSize - 1e-9 ) return true;
+  if ( size > bestSize + 1e-9 ) return false;
+  if ( bestGuess === null ) return true;
+  const guessIdx = targetWordIndexMap.get( guess );
+  const bestIdx = targetWordIndexMap.get( bestGuess );
+  if ( targetWeights && guessIdx !== undefined && bestIdx !== undefined ) {
+    const guessWeight = targetWeights[ guessIdx ];
+    const bestWeight = targetWeights[ bestIdx ];
+    if ( guessWeight !== bestWeight ) return guessWeight > bestWeight;
+  }
+  return guess < bestGuess;
+};
+
 class ComputationNode {
   constructor( words, guesses, possibleGuesses, skip = false, heuristic = new Heuristic() ) {
     this.words = words;
@@ -173,7 +198,7 @@ class ComputationNode {
         if ( this.guessSet.has( guess ) || this.guesses.includes( guess ) ) continue;
         const map = partition( words, guess );
         const s = Heuristic.score( words, guess, map, heuristic, true );
-        if ( !bestOption || s < bestOption.size ) bestOption = new GuessOption( guess, map, s );
+        if ( !bestOption || isBetterOption( s, guess, bestOption.size, bestOption.guess ) ) bestOption = new GuessOption( guess, map, s );
       }
       return bestOption;
     }
@@ -237,7 +262,7 @@ class ComputationNode {
           if ( isTarget ) size -= 10;
         }
       }
-      if ( size < bestSize ) {
+      if ( isBetterOption( size, guess, bestSize, bestGuess ) ) {
         bestSize = size;
         bestGuess = guess;
       }
@@ -277,7 +302,20 @@ class GuessOption {
     this.map = map;
     this.size = size;
   }
-  static compare( a, b ) { return a.size - b.size; }
+  static compare( a, b ) {
+    if ( a.size !== b.size ) return a.size - b.size;
+    // Same tie-break as getNextOption: prefer the more probable word, then
+    // alphabetical, so broadening explores likely answers first.
+    if ( targetWeights ) {
+      const aIdx = targetWordIndexMap.get( a.guess );
+      const bIdx = targetWordIndexMap.get( b.guess );
+      if ( aIdx !== undefined && bIdx !== undefined ) {
+        const diff = targetWeights[ bIdx ] - targetWeights[ aIdx ];
+        if ( diff !== 0 ) return diff;
+      }
+    }
+    return a.guess < b.guess ? -1 : ( a.guess > b.guess ? 1 : 0 );
+  }
 }
 
 class GuessNode {
@@ -373,20 +411,28 @@ class GuessNode {
     return guessNode;
   }
 
-  createTree( metric = Ranking.minimizeLongestMetric ) {
+  createTree( metric = Ranking.minimizeLongestMetric, words = null ) {
     const map = {};
     const ranking = new Ranking();
+    // Prior mass of each edge, used only by weightedMinimizeLongestMetric.
+    const weightOf = word => {
+      if ( !targetWeights || !words ) return 1;
+      const idx = targetWordIndexMap.get( word );
+      return idx === undefined ? 0 : targetWeights[ idx ];
+    };
     for ( const scoreString in this.map ) {
       const item = this.map[ scoreString ];
       const isString = typeof item === 'string';
-      const subtree = isString ? item : item.createTree( metric );
+      const childWords = wordPartition( words, this.guess, scoreString );
+      const subtree = isString ? item : item.createTree( metric, childWords );
       map[ scoreString ] = subtree;
+      const edgeWeight = childWords ? childWords.reduce( ( sum, w ) => sum + weightOf( w ), 0 ) : 1;
       if ( scoreString === '22222' ) {
-        ranking.addSelf();
+        ranking.addSelf( edgeWeight );
       } else {
         const yellows = getYellows( scoreString );
-        if ( isString ) ranking.addString( yellows );
-        else ranking.addRanking( subtree.ranking, yellows );
+        if ( isString ) ranking.addString( yellows, edgeWeight );
+        else ranking.addRanking( subtree.ranking, yellows, edgeWeight );
       }
     }
     return { guess: this.guess, map: map, depth: this.depth, ranking: ranking };
@@ -479,16 +525,41 @@ class Heuristic {
   }
 }
 
+// Split `words` by the score pattern `guess` would produce. Returns null when
+// the caller did not supply a word list (older call sites).
+const wordPartition = ( words, guess, scoreString ) => {
+  if ( !words ) return null;
+  const gi = guessWordIndexMap.get( guess );
+  const matrix = getSharedScores();
+  if ( gi === undefined || !matrix ) {
+    return words.filter( w => score( w, guess ) === scoreString );
+  }
+  const wanted = Number( scoreString );
+  const stride = targetWords.length;
+  return words.filter( w => matrix[ gi * stride + targetWordIndexMap.get( w ) ] === wanted );
+};
+
 class Ranking {
   constructor( counts = [ 0, 0 ], yellows = 0 ) {
     this.counts = counts;
     this.yellows = yellows;
   }
-  addString( yellows = 0 ) { this.counts[ 1 ]++; this.yellows += yellows; }
-  addSelf() { this.counts[ 0 ]++; }
-  addRanking( ranking, yellows = 0 ) {
+  addString( yellows = 0, weight = 1 ) {
+    this.counts[ 1 ]++;
+    this.yellows += yellows;
+    this.weightedScore = ( this.weightedScore || 0 ) + 2 * weight;
+  }
+  addSelf( weight = 1 ) {
+    this.counts[ 0 ]++;
+    this.weightedScore = ( this.weightedScore || 0 ) + weight;
+  }
+  addRanking( ranking, yellows = 0, weight = 1 ) {
     const count = ranking.counts.reduce( ( a, b ) => a + b, 0 );
     this.yellows += ranking.yellows + yellows * count;
+    if ( ranking.weightedScore !== undefined ) {
+      // Every word in the child takes one extra guess at this depth.
+      this.weightedScore = ( this.weightedScore || 0 ) + 1 * weight + ranking.weightedScore;
+    }
     for ( let i = 0; i < ranking.counts.length; i++ ) {
       if ( i + 1 >= this.counts.length ) this.counts.push( 0 );
       this.counts[ i + 1 ] += ranking.counts[ i ];
@@ -498,6 +569,19 @@ class Ranking {
     let c = 0;
     for ( let i = 0; i < this.counts.length; i++ ) c += this.counts[ i ] * ( i + 1 );
     return c;
+  }
+  // Worst-case depth, but ties broken by frequency-weighted expected turns
+  // instead of raw counts. Keeps the minimax guarantee while making the solver
+  // resolve likely words in fewer turns on the way down.
+  static weightedMinimizeLongestMetric( a, b ) {
+    if ( a.counts.length !== b.counts.length ) return a.counts.length - b.counts.length;
+    const wa = a.weightedScore !== undefined ? a.weightedScore : a.totalGuessesScore();
+    const wb = b.weightedScore !== undefined ? b.weightedScore : b.totalGuessesScore();
+    if ( wa !== wb ) return wa - wb;
+    for ( let i = a.counts.length - 1; i >= 0; i-- ) {
+      if ( a.counts[ i ] !== b.counts[ i ] ) return a.counts[ i ] - b.counts[ i ];
+    }
+    return 0;
   }
   static minimizeLongestMetric( a, b ) {
     if ( a.counts.length !== b.counts.length ) return a.counts.length - b.counts.length;

@@ -20,9 +20,17 @@ export const GUESSES = guessWords;
 
 // target word -> index in guessWords (targets are all in guessWords)
 export const t2g = new Int32Array( NT );
+// guess word -> index in targetWords (inverse of t2g; needed to look up the
+// prior weight of a candidate guess)
+export const g2t = new Int32Array( NG );
 {
   const map = new Map( guessWords.map( ( w, i ) => [ w, i ] ) );
+  const targetMap = new Map( targetWords.map( ( w, i ) => [ w, i ] ) );
   for ( let i = 0; i < NT; i++ ) t2g[ i ] = map.get( targetWords[ i ] );
+  for ( let i = 0; i < NG; i++ ) {
+    const ti = targetMap.get( guessWords[ i ] );
+    g2t[ i ] = ti === undefined ? -1 : ti;
+  }
 }
 
 // Global target weights (Float64Array of length NT, sum === 1.0, or null for uniform)
@@ -228,24 +236,40 @@ export const evalStarter = ( g, matrix, calib, mode, candK = 600, st = null, yw 
     st.v++; // per-bucket dedupe generation (monotonic across calls)
     const gen = st.v;
     const K = budgetFor( len, candK );
-    let bestE = Infinity, bestY = Infinity, bestJoint = Infinity;
+    let bestE = Infinity, bestY = Infinity, bestJoint = Infinity, bestGi = -1;
+    // Exact ties are common (especially with a flat prior), and `j < bestJoint`
+    // used to keep whichever word came first in the scan - in practice
+    // dictionary order. Break ties by the prior mass of the guess itself so real
+    // words (MOXIE) beat in-coloring dictionary filler (MOBIE/MOLIE/MOMIE/MOWIE).
+    const guessPrior = gi => {
+      if ( !weights ) return 0;
+      const ti = g2t[ gi ];
+      return ti < 0 ? -1 : weights[ ti ]; // out-of-dictionary guesses rank last
+    };
+    const considerCandidate = gi => {
+      const r = evalCandidate( flat, base, len, gi, matrix, est, cnt2, touched, hardConstraint, weights, wcnt2 );
+      const j = r.E + yw * r.Y;
+      const tie = bestGi >= 0 && Math.abs( j - bestJoint ) <= 1e-9;
+      const improves = bestGi < 0 || j < bestJoint - 1e-9 || ( tie && guessPrior( gi ) > guessPrior( bestGi ) );
+      if ( !improves ) return;
+      if ( j < bestJoint ) bestJoint = j;
+      bestE = r.E;
+      bestY = r.Y;
+      bestGi = gi;
+    };
     // in-bucket words first (always optimal near leaves, always hard-valid)
     for ( let i = 0; i < len; i++ ) {
       const gi = t2g[ flat[ base + i ] ];
       if ( gi === g || seenGen[ gi ] === gen ) continue;
       seenGen[ gi ] = gen;
-      const r = evalCandidate( flat, base, len, gi, matrix, est, cnt2, touched, hardConstraint, weights, wcnt2 );
-      const j = r.E + yw * r.Y;
-      if ( j < bestJoint ) { bestJoint = j; bestE = r.E; bestY = r.Y; }
+      considerCandidate( gi );
     }
     const topK = Math.min( K, NG );
     for ( let k = 0; k < topK; k++ ) {
       const gi = staticOrder[ k ];
       if ( gi === g || seenGen[ gi ] === gen ) continue;
       seenGen[ gi ] = gen;
-      const r = evalCandidate( flat, base, len, gi, matrix, est, cnt2, touched, hardConstraint, weights, wcnt2 );
-      const j = r.E + yw * r.Y;
-      if ( j < bestJoint ) { bestJoint = j; bestE = r.E; bestY = r.Y; }
+      considerCandidate( gi );
     }
     if ( bestE === Infinity ) throw new Error( `no candidate for starter ${g} score ${s}` );
     E += wMass * bestE;
@@ -301,10 +325,17 @@ export const evalCandidate = ( flat, base, len, gi, matrix, est, cnt2, touched, 
     }
     return { E, Y, joint: E + Y };
   } else {
+    // Weighted evaluation without a caller-supplied scratch buffer. This path
+    // must honour `weights` too, otherwise the two code paths disagree and
+    // flat-prior behaviour leaks back in.
+    const wcnt = hasWeights ? new Float64Array( 243 ) : null;
+    let totalW = 0;
     for ( let i = 0; i < len; i++ ) {
-      const s = matrix[ row + flat[ base + i ] ];
+      const t = flat[ base + i ];
+      const s = matrix[ row + t ];
       if ( cnt2[ s ] === 0 ) touched[ nTouched++ ] = s;
       cnt2[ s ]++;
+      if ( hasWeights ) { wcnt[ s ] += weights[ t ]; totalW += weights[ t ]; }
     }
     let E = 1, Y = 0;
     for ( let k = 0; k < nTouched; k++ ) {
@@ -312,14 +343,16 @@ export const evalCandidate = ( flat, base, len, gi, matrix, est, cnt2, touched, 
       const c = cnt2[ s ];
       cnt2[ s ] = 0;
       if ( s === 242 ) continue; // solved by this guess (242 = '22222' int)
-      Y += yellowsArray[ s ] * c / len;
+      const p = hasWeights && totalW > 0 ? wcnt[ s ] / totalW : c / len;
+      Y += yellowsArray[ s ] * p;
       if ( c === 1 ) {
-        E += 1 / len; // leaf word: one more guess
+        E += p; // leaf word: one more guess
       }
       else {
-        E += c * est.g[ c ] / len;
-        Y += c * est.y[ c ] / len;
+        E += est.g[ c ] * p;
+        Y += est.y[ c ] * p;
       }
+      if ( hasWeights ) wcnt[ s ] = 0;
     }
     return { E, Y, joint: E + Y };
   }
